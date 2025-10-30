@@ -4,15 +4,8 @@
 #include "fila.h"
 #include "filaprioridade.h"
 #include "filadupla.h"
+#include "utils.h"
 
-// struct para guardar os tipos de estruturas usados para guardar os chamados e menus
-typedef struct Estruturas{
-    pilha* pil;
-    fila* filaNormal;
-    filaPrioridade* filaPrioridade;
-    filaDupla* filadupla;
-    // duplamente
-}Estruturas;
 
 // struct que vai conter todos os tipos de menus
 typedef struct menuHandler{
@@ -21,20 +14,9 @@ typedef struct menuHandler{
     char* frase;
     int quant;
     char* options[15];
-    void(*funcaoMain)(int, Estruturas, char*);
+    void(*funcaoMain)(int, int, Estruturas, char*);
     void(*funcaoExtra)(int, Estruturas);
 }menuHandler;
-
-// tipo de tecla clicada
-typedef enum {
-    KC_OTHER = 0,
-    KC_UP,
-    KC_DOWN,
-    KC_LEFT,
-    KC_RIGHT,
-    KC_ENTER,
-    KC_ESC
-} KeyCode;
 
 // funcao que retorna Keycode (seta pra cima pra baixo, enter, esc)
 KeyCode userGetKey(void);

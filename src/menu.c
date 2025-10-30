@@ -185,7 +185,7 @@ void mainMenu(char* user){
         // chame ela e va para a proxima iteracao
         
         if(menuEscolhido.funcaoMain != NULL){
-            menuEscolhido.funcaoMain(lastSelected, estruturas, user);
+            menuEscolhido.funcaoMain(menuEscolhido.type, lastSelected, estruturas, user);
             // depois da funcao separada, verificar novamente o topo da pilha
             selected = 1;
             clear();

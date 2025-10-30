@@ -26,7 +26,7 @@ void insereFilaDupla(filaDupla* f, int pos, void* dado){
         // log
         exit(1);
     }
-    novoNo->cham = *(chamado*)dado;
+    novoNo->chamado = *(chamado*)dado;
     novoNo->prox = NULL;
     novoNo->ant = NULL;
 
@@ -69,19 +69,19 @@ chamado removerFilaDupla(filaDupla* f, int pos){
     if(f->n == 1){
         // remover unico elemento
         removido = f->inicio;
-        chamRemovido = removido->cham;
+        chamRemovido = removido->chamado;
         f->inicio = NULL;
         f->fim = NULL;
     }else if(pos == 0){
         // remover do inicio
         removido = f->inicio;
-        chamRemovido = removido->cham;
+        chamRemovido = removido->chamado;
         f->inicio = f->inicio->prox;
         f->inicio->ant = NULL;
     }else if(pos == f->n - 1){
         // remover do fim
         removido = f->fim;
-        chamRemovido = removido->cham;
+        chamRemovido = removido->chamado;
         f->fim = f->fim->ant;
         f->fim->prox = NULL;
     }else{
@@ -91,7 +91,7 @@ chamado removerFilaDupla(filaDupla* f, int pos){
             atual = atual->prox;
         }
         removido = atual;
-        chamRemovido = removido->cham;
+        chamRemovido = removido->chamado;
         atual->ant->prox = atual->prox;
         atual->prox->ant = atual->ant;
     }

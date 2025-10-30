@@ -5,11 +5,6 @@
 #include "menufunctions.h"
 #include "fila.h"
 
-struct noFila{
-    noFila* prox;
-    chamado chamado; // informacoes do chamado
-};
-
 fila * criarFila(void){
     fila * f= (fila*)malloc(sizeof(fila));
     if(f == NULL){
@@ -17,6 +12,7 @@ fila * criarFila(void){
         exit(1);
     }
     f->last = f->first = NULL;
+    f->n = 0;
     return f;
 }
 void filaInserir(fila * f, chamado m){
@@ -33,6 +29,7 @@ void filaInserir(fila * f, chamado m){
         f->last->prox = no;
     }
     f->last = no;
+    f->n++;
 }
 
 chamado filaRetirar(fila * f){
@@ -48,6 +45,7 @@ chamado filaRetirar(fila * f){
         f->last = NULL;
     }
     free(temp);
+    f->n--;
     return v;
 }
 

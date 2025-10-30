@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 #include "menu.h"
 #include "pilha.h"
@@ -29,19 +30,22 @@ static Tempo tempoAgora(void){
 }
 
 // funcao para o menu de criar chamado (preferencia e tiulo do chamado)
-static void menuCriarChamadoHandler(int comPreferencia, Estruturas dados, char* user){
+static void menuCriarChamadoHandler(int prioridadeParametro, int comPreferencia, Estruturas dados, char* user){
     // menu tipo 3
 
     // 1 = Sim
     // 2 = nao
 
+    // caso preferencia for maior que 0, significa que ja foi escolhido
+    // entao pode ir para o proximo passo
+
     char tituloChamada[50]; // buffer para o titulo da chamada
-    int prioridade = 0; // padrao 0 
+    int prioridade = prioridadeParametro; // padrao 0 
     
     char* pergunta = "Qual a prioridade desse chamado?";
     int entradaErrada = 0;
     // descobre a prioridade , caso tiver
-    if(comPreferencia == 1){
+    if(comPreferencia == 1 && prioridade == 0){
         while(1){
             printf("\n");
             repetirChar(15, '-', BLUE);
@@ -107,7 +111,8 @@ static void menuCriarChamadoHandler(int comPreferencia, Estruturas dados, char* 
         // se for pressionado o esc retorna para o primeiro menu
         clear();
         if(comPreferencia){
-            menuCriarChamadoHandler(comPreferencia, dados, user);
+            // preferencia 0 para permitir que seja perguntado de novo
+            menuCriarChamadoHandler(0, comPreferencia, dados, user);
         }else{
             popPilha(dados.pil);
             // caso nao tiver preferencia, volta para o menu de criar chamado
@@ -116,14 +121,44 @@ static void menuCriarChamadoHandler(int comPreferencia, Estruturas dados, char* 
         // caso apertar o esc denovo, ele voltar para o menu de criar chamado original
         return;
     }
-    
     clear();
     
+    // descrever o problema
+    char* pergunta3 = "Descreva melhor o seu problema:";
+    printf("\n");
+    repetirChar(15, '-', BLUE);
+    printf(BLUE"%s"RESET, "Criar chamado");
+    repetirChar(15, '-', BLUE);
+    printf("\n");
+    
+    printf(GREEN" %s"RESET, pergunta3);
+    printf("\n\n ");
+    fflush(stdout);
+    char descricaoChamada[550]; // buffer para a descricao da chamada
+    escVerification = 0; // variavel para verificar se o ESC foi indentificado no inputASCII
+    inputASCII(descricaoChamada, 550, WHITE, &escVerification); // ler input
+    // funcao para verificar se e uma string valida
+
+    if(escVerification){
+        clear();
+        menuCriarChamadoHandler(prioridade, comPreferencia, dados, user);
+        return;
+    }
+    clear();
+
+
     chamado cham;
     cham.status = 1;
-    cham.titulo = tituloChamada;
     
-    cham.criador = user;
+    strncpy(cham.titulo, tituloChamada, sizeof(cham.titulo)-1);
+    cham.titulo[sizeof(cham.titulo)-1] = '\0'; // garante terminação
+
+    strncpy(cham.descricao, descricaoChamada, sizeof(cham.descricao)-1);
+    cham.descricao[sizeof(cham.descricao)-1] = '\0';
+
+    strncpy(cham.criador, user, sizeof(cham.criador)-1);
+    cham.criador[sizeof(cham.criador)-1] = '\0';
+
     Tempo t = tempoAgora();
     time_t agora = time(NULL);          // pega o tempo atual em segundos
     cham.tempoSimples = agora;
@@ -165,29 +200,161 @@ static void menuEditHandlerUsuarios(int userAdm, Estruturas dados, char* user){
     // se e adm ou nao (0 ou 1)
 }
 
+static void funcaoMainExtra(int type, int opcao, Estruturas dados, char* user){
+    switch(type){
+        case 3:
+            // criar chamado
+            menuCriarChamadoHandler(0, opcao, dados, user);
+            break;
+        case 5:
+            // editar chamados
+            break;
+        case 7:
+            // editar usuarios
+            break;
+    }
+}
+
+
 // --------------------------------
 // FUNCOES DE CONTEUDO EXTRA
 // --------------------------------
 
 // funcao auxiliar para mostrar os chamados em baixo
-static void mostrarChamados(Estruturas dados){
-    // funcao para mostrar os chamados em baixo
-    // chamados, abertos, em andamento, fechados
-    fila * f = dados.filaNormal;
-    filaPrioridade * fp = dados.filaPrioridade;
-    filaDupla * fd = dados.filadupla;
-    // duplamente encadeada
-    noFila* atual1 = f->first;
-    noDuplo* atual2 = fd->inicio;
+static void mostrarChamados(Estruturas dados) {
+    fila *f = dados.filaNormal;
+    filaPrioridade *fp = dados.filaPrioridade;
+    filaDupla *fd = dados.filadupla;
 
-    repetirChar(150, '#', YELLOW);
+    noFila *atual1 = f ? f->first : NULL;
+    noDuplo *atual2 = fd ? fd->inicio : NULL;
+
+    int fQuant = f ? f->n : 0;
+    int fdQuant = fd ? fd->n : 0;
+    // criar nova fila normal para em andamento
+    int fpQuant = fp ? fp->n : 0;
+
+    int fUsed = 0, fdUsed = 0, fpUsed = 0;
+    printf(CYAN" +--------------------------------------------------+     +--------------------------------------------------+     +--------------------------------------------------+\n"RESET);
+    printf(CYAN" |                    ABERTOS                       |     |                  EM ANDAMENTO                    |     |                    FECHADOS                      |\n"RESET);
+    printf(CYAN" +--------------------------------------------------+     +--------------------------------------------------+     +--------------------------------------------------+\n"RESET);
+
+    // Enquanto houver pelo menos 1 chamado em qualquer coluna
+    while (fUsed < fQuant || fdUsed < fdQuant || fpUsed < fpQuant) {
+
+        char buf1[51] = "", buf2[51] = "", buf3[51] = "";
+
+        // Linha 1: Título
+        if (fUsed < fQuant && atual1) snprintf(buf1, 51, "%s", atual1->chamado.titulo);
+        if (fdUsed < fdQuant && atual2) snprintf(buf2, 51, "%s", atual2->chamado.titulo);
+        if (fpUsed < fpQuant) snprintf(buf3, 51, "%s", fp->elementos[fpUsed].titulo);
+
+        if (buf1[0] || buf2[0] || buf3[0])
+            printf("| %-50s |   | %-50s |   | %-50s |\n", buf1, buf2, buf3);
+
+        // Linha 2: Prioridade
+        if (fUsed < fQuant && atual1) snprintf(buf1, 51, "Prioridade: %d", atual1->chamado.prioridade);
+        else buf1[0] = '\0';
+        if (fdUsed < fdQuant && atual2) snprintf(buf2, 51, "Prioridade: %d", atual2->chamado.prioridade);
+        else buf2[0] = '\0';
+        if (fpUsed < fpQuant) snprintf(buf3, 51, "Prioridade: %d", fp->elementos[fpUsed].prioridade);
+        else buf3[0] = '\0';
+
+        if (buf1[0] || buf2[0] || buf3[0])
+            printf("| %-50s |   | %-50s |   | %-50s |\n", buf1, buf2, buf3);
+
+        // Linha 3: Criador
+        if (fUsed < fQuant && atual1) snprintf(buf1, 51, "Criador: %s", atual1->chamado.criador); else buf1[0] = '\0';
+        if (fdUsed < fdQuant && atual2) snprintf(buf2, 51, "Criador: %s", atual2->chamado.criador); else buf2[0] = '\0';
+        if (fpUsed < fpQuant) snprintf(buf3, 51, "Criador: %s", fp->elementos[fpUsed].criador); else buf3[0] = '\0';
+
+        if (buf1[0] || buf2[0] || buf3[0])
+            printf("| %-50s |   | %-50s |   | %-50s |\n", buf1, buf2, buf3);
+
+        // Linha 4: Data / horário
+        if (fUsed < fQuant && atual1) snprintf(buf1, 51, "Criado em: %02d/%02d/%04d %02d:%02d:%02d",
+                atual1->chamado.tempoComplexo.dia,
+                atual1->chamado.tempoComplexo.mes,
+                atual1->chamado.tempoComplexo.ano,
+                atual1->chamado.tempoComplexo.horas,
+                atual1->chamado.tempoComplexo.minutos,
+                atual1->chamado.tempoComplexo.segundos);
+        else buf1[0] = '\0';
+        if (fdUsed < fdQuant && atual2) snprintf(buf2, 51, "Criado em: %02d/%02d/%04d %02d:%02d:%02d",
+                atual2->chamado.tempoComplexo.dia,
+                atual2->chamado.tempoComplexo.mes,
+                atual2->chamado.tempoComplexo.ano,
+                atual2->chamado.tempoComplexo.horas,
+                atual2->chamado.tempoComplexo.minutos,
+                atual2->chamado.tempoComplexo.segundos);
+        else buf2[0] = '\0';
+        if (fpUsed < fpQuant) snprintf(buf3, 51, "Criado em: %02d/%02d/%04d %02d:%02d:%02d",
+                fp->elementos[fpUsed].tempoComplexo.dia,
+                fp->elementos[fpUsed].tempoComplexo.mes,
+                fp->elementos[fpUsed].tempoComplexo.ano,
+                fp->elementos[fpUsed].tempoComplexo.horas,
+                fp->elementos[fpUsed].tempoComplexo.minutos,
+                fp->elementos[fpUsed].tempoComplexo.segundos);
+        else buf3[0] = '\0';
+
+        if (buf1[0] || buf2[0] || buf3[0])
+            printf("| %-50s |   | %-50s |   | %-50s |\n", buf1, buf2, buf3);
+
+        // Linha 5: Cabeçalho descrição
+        if ((fUsed < fQuant && atual1) || (fdUsed < fdQuant && atual2) || (fpUsed < fpQuant))
+            printf("| %-50s |   | %-50s |   | %-50s |\n", "Descricao:", "Descricao:", "Descricao:");
+
+        // Descrição
+        int len1 = (fUsed < fQuant && atual1) ? strlen(atual1->chamado.descricao) : 0;
+        int len2 = (fdUsed < fdQuant && atual2) ? strlen(atual2->chamado.descricao) : 0;
+        int len3 = (fpUsed < fpQuant) ? strlen(fp->elementos[fpUsed].descricao) : 0;
+
+        for (int linha = 0; linha < 8; linha++) {
+            int inicio = linha * 50;
+            char buffer1[51] = "", buffer2[51] = "", buffer3[51] = "";
+
+            if (fUsed < fQuant && inicio < len1)
+                strncpy(buffer1, &atual1->chamado.descricao[inicio], 50);
+            if (fdUsed < fdQuant && inicio < len2)
+                strncpy(buffer2, &atual2->chamado.descricao[inicio], 50);
+            if (fpUsed < fpQuant && inicio < len3)
+                strncpy(buffer3, &fp->elementos[fpUsed].descricao[inicio], 50);
+
+            buffer1[50] = buffer2[50] = buffer3[50] = '\0';
+
+            if (buffer1[0] || buffer2[0] || buffer3[0])
+                printf("| %-50s |   | %-50s |   | %-50s |\n",
+                        buffer1[0] ? buffer1 : "",
+                        buffer2[0] ? buffer2 : "",
+                        buffer3[0] ? buffer3 : "");
+        }
+
+        // Linha de separação
+        if ((fUsed < fQuant && atual1) || (fdUsed < fdQuant && atual2) || (fpUsed < fpQuant))
+            printf("+------------------------------------------------+   +------------------------------------------------+   +------------------------------------------------+\n");
+
+        // Avança os ponteiros
+        if (fUsed < fQuant && atual1) atual1 = atual1->prox;
+        if (fdUsed < fdQuant && atual2) atual2 = atual2->prox;
+        if (fUsed < fQuant) fUsed++;
+        if (fdUsed < fdQuant) fdUsed++;
+        if (fpUsed < fpQuant) fpUsed++;
+
+        fflush(stdout);
+    }
 }
+
+
 
 // para estaticas, relatorios e logs, (tipos 6, 8, 9)
 // para o tipo 4 tambem (visualizar chamados)
 // as info seram printadas em baixo
 static void conteudoExtra(int type, Estruturas dados){
     switch(type){
+        case 4:
+            // visualizar chamados
+            mostrarChamados(dados);
+            break;
         case 6:
             // estatisticas
             break;
@@ -197,12 +364,9 @@ static void conteudoExtra(int type, Estruturas dados){
         case 9:
             // logs
             break;
-        case 4:
-            // visualizar chamados
-            mostrarChamados(dados);
-            break;
     }
 }
+
 
 // vai criar um struct do determinado tipo de menu, e vai retornar ele
 static menuHandler createMenu(int type){
@@ -230,7 +394,7 @@ static menuHandler createMenu(int type){
             menuReturn.type = 3;
             menuReturn.titulo = "";
             menuReturn.frase = "";
-            menuReturn.funcaoMain = menuCriarChamadoHandler;
+            menuReturn.funcaoMain = funcaoMainExtra;
             break;
     
         case 4:
@@ -255,7 +419,7 @@ static menuHandler createMenu(int type){
             menuReturn.type = 5;
             menuReturn.titulo = "";
             menuReturn.frase = "";
-            menuReturn.funcaoMain = menuEditHandlerChamados;
+            menuReturn.funcaoMain = funcaoMainExtra;
             break;
     
         case 6:
@@ -278,7 +442,7 @@ static menuHandler createMenu(int type){
             menuReturn.type = 7;
             menuReturn.titulo = "";
             menuReturn.frase = "";
-            menuReturn.funcaoMain = menuEditHandlerUsuarios;
+            menuReturn.funcaoMain = funcaoMainExtra;
             break;
     
         case 8:

@@ -3,11 +3,15 @@
 
 #include "menufunctions.h"
 
-typedef struct noFila noFila;
+typedef struct noFila{
+    struct noFila* prox;
+    chamado chamado; // informacoes do chamado
+}noFila;
 
 typedef struct fila{
     noFila* first;
     noFila* last;
+    int n;
 } fila;
 
 // criar uma fila

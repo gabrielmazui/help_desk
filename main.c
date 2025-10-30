@@ -7,25 +7,10 @@
 #include <stdio.h>
 #include <locale.h>
 
-#ifdef _WIN32
-#include <windows.h> // apenas no Windows
-#endif
-
 #include "menu.h"
 #include "colors.h"
 #include "utils.h"
 #include "login.h"
-
-// funcao para controlar visibilidade do cursor (apenas para windowns)
-void setCursorVisible(int visible) {
-    #ifdef _WIN32
-        CONSOLE_CURSOR_INFO info;
-        HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
-        GetConsoleCursorInfo(h, &info);
-        info.bVisible = visible;
-        SetConsoleCursorInfo(h, &info);
-    #endif
-}
 
 // funcao para ficar reescrevendo as opcoes conforme o selecionado
 void updateMenuSelection(int selected){
@@ -51,16 +36,9 @@ void desenharPrimeiroMenu(void){
 int main(){
     
     // esconde o cursor de texto
-    #ifdef _WIN32
-        setCursorVisible(0); // esconde cursor no Windows
-    #else
-        printf("\033[?25l"); // esconde cursor no Linux/macOS
-        fflush(stdout);
-    #endif
-    
-    // esse codigo acima esconde o cursor de texto que fica piscando ( mais por questao de estetica mesmo)
-        clear();
-        int selected = 1;
+    controlarCursor(0);
+    clear();
+    int selected = 1; // int para guardar opcao selecionada 
         
     while(1){
         desenharPrimeiroMenu();
@@ -101,12 +79,7 @@ int main(){
             clear();
         }
     }
-    #ifdef _WIN32
-        setCursorVisible(1); // mostra cursor no Windows
-    #else
-        printf("\033[?25h"); // mostra cursor no Linux/macOS
-        fflush(stdout);
-    #endif
+    controlarCursor(1);
     // mostrar o cursor de texto de novo
     return 0;
 }

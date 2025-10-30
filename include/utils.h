@@ -6,6 +6,31 @@
 #include "pilha.h"
 #include "fila.h"
 
+// struct para guardar os tipos de estruturas usados para guardar os chamados e menus
+typedef struct Estruturas{
+    pilha* pil;
+    fila* filaNormal;
+    filaPrioridade* filaPrioridade;
+    filaDupla* filadupla;
+    // duplamente
+}Estruturas;
+
+// tipo de tecla clicada
+typedef enum {
+    KC_OTHER = 0,
+    KC_UP,
+    KC_DOWN,
+    KC_LEFT,
+    KC_RIGHT,
+    KC_ENTER,
+    KC_ESC
+} KeyCode;
+
+
+// controlar visibilidade do cursor de texto
+// visible -> 1 para mostrar, 0 para esconder
+void controlarCursor(int visible);
+
 // repetir caracteres 
 // n -> quantidade
 // c -> qual caracter

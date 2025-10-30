@@ -4,7 +4,7 @@
 #include "menufunctions.h"
 
 typedef struct noDuplo{
-    chamado cham;
+    chamado chamado;
     struct noDuplo* prox;
     struct noDuplo* ant;
 } noDuplo;

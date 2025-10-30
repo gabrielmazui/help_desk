@@ -42,9 +42,9 @@ void filaPrioridadeInserir(filaPrioridade* f, chamado c){
         }
     }
 
-    int j = f->n;          // posição onde ele vai entrar
-    
+    f->elementos[f->n] = c; // coloca o chamado no final
     f->n++;
+    int j = f->n;          // posição onde ele vai entrar
 
     // ordenar por prioridade (maior prioridade primeiro)
     // se prioridades iguais, ordenar por tempo (mais antigo primeiro)
@@ -83,12 +83,11 @@ chamado filaPrioridadeRemover(filaPrioridade* f){
         int direita = 2 * j + 2;
         int pai = j;
 
-        if(comparar(f->elementos[esquerda], f->elementos[pai]) == 1){
+        if (esquerda < f->n && comparar(f->elementos[esquerda], f->elementos[pai]))
             pai = esquerda;
-        }
-        if(comparar(f->elementos[direita], f->elementos[pai]) == 1){
+        if (direita < f->n && comparar(f->elementos[direita], f->elementos[pai]))
             pai = direita;
-        }
+        
         if(pai != j){
             // troca
             chamado temp = f->elementos[j];
