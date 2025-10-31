@@ -158,7 +158,7 @@ void inputASCII(char *buffer, int maxChars, const char *color, int *escVerificat
         if (c == '\r' || c == '\n') {
             // Enter encerra apenas se algo foi digitado
             if (len == 0) {
-                printf("\n%sTexto inválido! Digite algo.%s\n", RED, RESET);
+                printf("%sTexto invalido%s\n", RED, RESET);
                 printf("%s", color);
                 fflush(stdout);
                 continue;
@@ -266,6 +266,7 @@ void initEstruturas(Estruturas* estruturas){
     estruturas->filaNormal = criarFila();
     estruturas->filaPrioridade = criarFilaPrioridade();
     estruturas->filadupla = criarFilaDupla();
+    estruturas->filaAndamento = criarFila();
 }
 
 // funcao para limpar a tela

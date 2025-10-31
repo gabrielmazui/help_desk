@@ -7,8 +7,10 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
+
 #else
 #include <conio.h>
+#include <windows.h>
 #endif
 
 #include "menu.h"
@@ -18,7 +20,6 @@
 #include "fila.h"
 #include "filaprioridade.h"
 #include "utils.h"
-
 
 // funcao para mostrar pos animacao de carregamento
 
@@ -52,15 +53,14 @@ static void bemVindo(void){
     printf("\n");
 }
 
-
-// atualiza apenas a linha da opção que mudou
+// funcao para atualizar apenas uma opcao do menu
 static void updateOption(int linha, const char* texto, const char* fundo, const char* cor) {
     printf("\033[%d;1H\033[K", linha); // move para linha e coluna 1 e limpa a linha
-    printf(" %s%s%s\n"RESET, fundo, cor, texto);
+    printf(" %s%s%s\n" RESET, fundo, cor, texto);
     fflush(stdout);
 }
 
-// funcao para desenhar o atual menu
+// funcao para desenhar o menu atual na tela
 static void desenharMenuAtual(menuHandler m, int selected, Estruturas dados){
     
     if(m.type == 1){
@@ -148,7 +148,7 @@ static int contadorDeLinhas(menuHandler m){
 // funcao handle para os menus, vai ficar no loop infinito, lendo as teclas
 // sempre mostrando o topo da pilha
 void mainMenu(char* user){
-    
+
     menuHandler menu1;
     menu1.type = 1;
     char* titulo = "Menu principal";

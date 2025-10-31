@@ -12,6 +12,8 @@
 #include "colors.h"
 #include "filadupla.h"
 
+#define TAM_LINHA 52
+
 // funcao para criar um struct com os dados do tempo de agora
 static Tempo tempoAgora(void){
     Tempo t;
@@ -134,9 +136,9 @@ static void menuCriarChamadoHandler(int prioridadeParametro, int comPreferencia,
     printf(GREEN" %s"RESET, pergunta3);
     printf("\n\n ");
     fflush(stdout);
-    char descricaoChamada[550]; // buffer para a descricao da chamada
+    char descricaoChamada[350]; // buffer para a descricao da chamada
     escVerification = 0; // variavel para verificar se o ESC foi indentificado no inputASCII
-    inputASCII(descricaoChamada, 550, WHITE, &escVerification); // ler input
+    inputASCII(descricaoChamada, 300, WHITE, &escVerification); // ler input
     // funcao para verificar se e uma string valida
 
     if(escVerification){
@@ -220,127 +222,576 @@ static void funcaoMainExtra(int type, int opcao, Estruturas dados, char* user){
 // FUNCOES DE CONTEUDO EXTRA
 // --------------------------------
 
-// funcao auxiliar para mostrar os chamados em baixo
+// funcao para formatar testo da descricao em varias linhas
+static void quebrarDescricao(const char *texto, char destino[7][50]) {
+    int linha = 0;
+    const char *p = texto;
+
+    while (*p && linha < 7) {
+        int col = 0;
+        int lastSpace = -1;
+
+        while (*p && *p != '\n' && col < 49) {
+            destino[linha][col] = *p;
+
+            if (*p == ' ')
+                lastSpace = col; // marca último espaço antes de encher a linha
+
+            p++;
+            col++;
+        }
+
+        
+        if (*p && *p != ' ' && col >= 49 && lastSpace != -1) {
+            // volta o ponteiro até o último espaço
+            int retroceder = col - lastSpace - 1;
+            p -= retroceder; // volta no texto original
+            col = lastSpace; // corta a linha ali
+        }
+
+        // finaliza a linha
+        destino[linha][col] = '\0';
+        linha++;
+
+        // pular o \n se tiver
+        if (*p == '\n') p++;
+
+        // pula espaço inicial da próxima linha, se houver
+        if (*p == ' ') p++;
+    }
+
+    // Garante que as linhas restantes fiquem vazias
+    for (; linha < 7; linha++)
+        destino[linha][0] = '\0';
+}
+
+
+// funcao auxiliar para mostrar os chamados em baixo do menu de visualizar chamados
 static void mostrarChamados(Estruturas dados) {
     fila *f = dados.filaNormal;
     filaPrioridade *fp = dados.filaPrioridade;
     filaDupla *fd = dados.filadupla;
+    fila *fAndamento = dados.filaAndamento;
 
-    noFila *atual1 = f ? f->first : NULL;
-    noDuplo *atual2 = fd ? fd->inicio : NULL;
+    noFila *atualFilaAberto = f ? f->first : NULL;
+    noDuplo *atualFilaFechado = fd ? fd->inicio : NULL;
+    noFila *atualFilaAndamento = fAndamento ? fAndamento->first : NULL;
 
     int fQuant = f ? f->n : 0;
     int fdQuant = fd ? fd->n : 0;
-    // criar nova fila normal para em andamento
+    int fAndamentoQuant = fAndamento ? fAndamento->n : 0;
     int fpQuant = fp ? fp->n : 0;
 
-    int fUsed = 0, fdUsed = 0, fpUsed = 0;
-    printf(CYAN" +--------------------------------------------------+     +--------------------------------------------------+     +--------------------------------------------------+\n"RESET);
-    printf(CYAN" |                    ABERTOS                       |     |                  EM ANDAMENTO                    |     |                    FECHADOS                      |\n"RESET);
-    printf(CYAN" +--------------------------------------------------+     +--------------------------------------------------+     +--------------------------------------------------+\n"RESET);
+    int fUsed = 0, fdUsed = 0, fAndamentoUsed = 0, fpUsed = 0;
+    printf(GREEN" +--------------------------------------------------+     "YELLOW"+--------------------------------------------------+     "RED"+--------------------------------------------------+\n"RESET);
+    printf(GREEN" |                     ABERTO                       |     "YELLOW"|                   EM ANDAMENTO                   |     "RED"|                      FECHADO                     |\n"RESET);
+    printf(GREEN" +--------------------------------------------------+     "YELLOW"+--------------------------------------------------+     "RED"+--------------------------------------------------+\n"RESET);
 
-    // Enquanto houver pelo menos 1 chamado em qualquer coluna
-    while (fUsed < fQuant || fdUsed < fdQuant || fpUsed < fpQuant) {
 
-        char buf1[51] = "", buf2[51] = "", buf3[51] = "";
+    // calcular número de linhas
+    int linhasAberto = (fQuant + fpQuant) * 14;
+    int linhasAndamento = fAndamentoQuant * 14;
+    int linhasFechado = fdQuant * 14;
 
-        // Linha 1: Título
-        if (fUsed < fQuant && atual1) snprintf(buf1, 51, "%s", atual1->chamado.titulo);
-        if (fdUsed < fdQuant && atual2) snprintf(buf2, 51, "%s", atual2->chamado.titulo);
-        if (fpUsed < fpQuant) snprintf(buf3, 51, "%s", fp->elementos[fpUsed].titulo);
+    // inicializar ponteiros como NULL
+    char **matrizAberto = NULL;
+    char **matrizAndamento = NULL;
+    char **matrizFechado = NULL;
 
-        if (buf1[0] || buf2[0] || buf3[0])
-            printf("| %-50s |   | %-50s |   | %-50s |\n", buf1, buf2, buf3);
+    // alocar matrizAberto se tiver linhas
+    if (linhasAberto > 0) {
+        matrizAberto = calloc(linhasAberto, sizeof(char*));
+        if (!matrizAberto) { // logs
+            perror("calloc matrizAberto"); exit(1); 
+        }
+        for (int i = 0; i < linhasAberto; i++) {
+            matrizAberto[i] = calloc(52, sizeof(char)); // 51 + '\0'
+            if (!matrizAberto[i]) { 
+                // logs
+                perror("calloc matrizAberto[i]"); exit(1); 
+            }
+        }
+    }
 
-        // Linha 2: Prioridade
-        if (fUsed < fQuant && atual1) snprintf(buf1, 51, "Prioridade: %d", atual1->chamado.prioridade);
-        else buf1[0] = '\0';
-        if (fdUsed < fdQuant && atual2) snprintf(buf2, 51, "Prioridade: %d", atual2->chamado.prioridade);
-        else buf2[0] = '\0';
-        if (fpUsed < fpQuant) snprintf(buf3, 51, "Prioridade: %d", fp->elementos[fpUsed].prioridade);
-        else buf3[0] = '\0';
+    // alocar matrizAndamento se tiver linhas
+    if (linhasAndamento > 0) {
+        matrizAndamento = calloc(linhasAndamento, sizeof(char*));
+        if (!matrizAndamento) { 
+            // logs
+            perror("calloc matrizAndamento"); exit(1); 
+        }
+        for (int i = 0; i < linhasAndamento; i++) {
+            matrizAndamento[i] = calloc(52, sizeof(char));
+            if (!matrizAndamento[i]) { 
+                // logs
+                perror("calloc matrizAndamento[i]"); exit(1); 
+            }
+        }
+    }
 
-        if (buf1[0] || buf2[0] || buf3[0])
-            printf("| %-50s |   | %-50s |   | %-50s |\n", buf1, buf2, buf3);
+    // alocar matrizFechado se tiver linhas
+    if (linhasFechado > 0) {
+        matrizFechado = calloc(linhasFechado, sizeof(char*));
+        if (!matrizFechado) { perror("calloc matrizFechado"); exit(1); }
+        for (int i = 0; i < linhasFechado; i++) {
+            matrizFechado[i] = calloc(52, sizeof(char));
+            if (!matrizFechado[i]) { perror("calloc matrizFechado[i]"); exit(1); }
+        }
+    }
 
-        // Linha 3: Criador
-        if (fUsed < fQuant && atual1) snprintf(buf1, 51, "Criador: %s", atual1->chamado.criador); else buf1[0] = '\0';
-        if (fdUsed < fdQuant && atual2) snprintf(buf2, 51, "Criador: %s", atual2->chamado.criador); else buf2[0] = '\0';
-        if (fpUsed < fpQuant) snprintf(buf3, 51, "Criador: %s", fp->elementos[fpUsed].criador); else buf3[0] = '\0';
 
-        if (buf1[0] || buf2[0] || buf3[0])
-            printf("| %-50s |   | %-50s |   | %-50s |\n", buf1, buf2, buf3);
+    int linhaAtualAberto = 0;
+    int linhaAtualAndamento = 0;
+    int linhaAtualFechado = 0;
+    // 0 - linha vazia
+    // 1 - titulo
+    // 2 - prioridade
+    // 3 - criador
+    // 4 - data e hora
+    // 5 - descricao
+    // 6 - separador
+    while(fUsed < fQuant || fdUsed < fdQuant || fAndamentoUsed < fAndamentoQuant || fpUsed < fpQuant) {
 
-        // Linha 4: Data / horário
-        if (fUsed < fQuant && atual1) snprintf(buf1, 51, "Criado em: %02d/%02d/%04d %02d:%02d:%02d",
-                atual1->chamado.tempoComplexo.dia,
-                atual1->chamado.tempoComplexo.mes,
-                atual1->chamado.tempoComplexo.ano,
-                atual1->chamado.tempoComplexo.horas,
-                atual1->chamado.tempoComplexo.minutos,
-                atual1->chamado.tempoComplexo.segundos);
-        else buf1[0] = '\0';
-        if (fdUsed < fdQuant && atual2) snprintf(buf2, 51, "Criado em: %02d/%02d/%04d %02d:%02d:%02d",
-                atual2->chamado.tempoComplexo.dia,
-                atual2->chamado.tempoComplexo.mes,
-                atual2->chamado.tempoComplexo.ano,
-                atual2->chamado.tempoComplexo.horas,
-                atual2->chamado.tempoComplexo.minutos,
-                atual2->chamado.tempoComplexo.segundos);
-        else buf2[0] = '\0';
-        if (fpUsed < fpQuant) snprintf(buf3, 51, "Criado em: %02d/%02d/%04d %02d:%02d:%02d",
-                fp->elementos[fpUsed].tempoComplexo.dia,
-                fp->elementos[fpUsed].tempoComplexo.mes,
-                fp->elementos[fpUsed].tempoComplexo.ano,
-                fp->elementos[fpUsed].tempoComplexo.horas,
-                fp->elementos[fpUsed].tempoComplexo.minutos,
-                fp->elementos[fpUsed].tempoComplexo.segundos);
-        else buf3[0] = '\0';
-
-        if (buf1[0] || buf2[0] || buf3[0])
-            printf("| %-50s |   | %-50s |   | %-50s |\n", buf1, buf2, buf3);
-
-        // Linha 5: Cabeçalho descrição
-        if ((fUsed < fQuant && atual1) || (fdUsed < fdQuant && atual2) || (fpUsed < fpQuant))
-            printf("| %-50s |   | %-50s |   | %-50s |\n", "Descricao:", "Descricao:", "Descricao:");
-
-        // Descrição
-        int len1 = (fUsed < fQuant && atual1) ? strlen(atual1->chamado.descricao) : 0;
-        int len2 = (fdUsed < fdQuant && atual2) ? strlen(atual2->chamado.descricao) : 0;
-        int len3 = (fpUsed < fpQuant) ? strlen(fp->elementos[fpUsed].descricao) : 0;
-
-        for (int linha = 0; linha < 8; linha++) {
-            int inicio = linha * 50;
-            char buffer1[51] = "", buffer2[51] = "", buffer3[51] = "";
-
-            if (fUsed < fQuant && inicio < len1)
-                strncpy(buffer1, &atual1->chamado.descricao[inicio], 50);
-            if (fdUsed < fdQuant && inicio < len2)
-                strncpy(buffer2, &atual2->chamado.descricao[inicio], 50);
-            if (fpUsed < fpQuant && inicio < len3)
-                strncpy(buffer3, &fp->elementos[fpUsed].descricao[inicio], 50);
-
-            buffer1[50] = buffer2[50] = buffer3[50] = '\0';
-
-            if (buffer1[0] || buffer2[0] || buffer3[0])
-                printf("| %-50s |   | %-50s |   | %-50s |\n",
-                        buffer1[0] ? buffer1 : "",
-                        buffer2[0] ? buffer2 : "",
-                        buffer3[0] ? buffer3 : "");
+        // ========================================================
+        // (TÍTULO)
+        // ========================================================
+        if(linhasAberto > 0){
+            matrizAberto[linhaAtualAberto][0] = '\0';
+        }
+        if(linhasAndamento > 0){
+            matrizAndamento[linhaAtualAndamento][0] = '\0';
+        }
+        if(linhasFechado > 0){
+            matrizFechado[linhaAtualFechado][0] = '\0';
         }
 
-        // Linha de separação
-        if ((fUsed < fQuant && atual1) || (fdUsed < fdQuant && atual2) || (fpUsed < fpQuant))
-            printf("+------------------------------------------------+   +------------------------------------------------+   +------------------------------------------------+\n");
+        if (fpUsed < fpQuant) {
+            matrizAberto[linhaAtualAberto][0] = '1'; // marca como titulo
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s", fp->elementos[fpUsed].titulo);
+            linhaAtualAberto++;
+        } else if (fUsed < fQuant && atualFilaAberto) {
+            matrizAberto[linhaAtualAberto][0] = '1'; // marca como titulo
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s", atualFilaAberto->chamado.titulo);
+            linhaAtualAberto++;
+        }
+        if (fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
+            matrizAndamento[linhaAtualAndamento][0] = '1'; // marca como titulo
+            snprintf(matrizAndamento[linhaAtualAndamento] + 1, TAM_LINHA - 1, "%s", atualFilaAndamento->chamado.titulo);
+            linhaAtualAndamento++;
+        }
 
-        // Avança os ponteiros
-        if (fUsed < fQuant && atual1) atual1 = atual1->prox;
-        if (fdUsed < fdQuant && atual2) atual2 = atual2->prox;
-        if (fUsed < fQuant) fUsed++;
-        if (fdUsed < fdQuant) fdUsed++;
-        if (fpUsed < fpQuant) fpUsed++;
+        if (fdUsed < fdQuant && atualFilaFechado) {
+            matrizFechado[linhaAtualFechado][0] = '1'; // marca como titulo
+            snprintf(matrizFechado[linhaAtualFechado] + 1, TAM_LINHA - 1, "%s", atualFilaFechado->chamado.titulo);
+            linhaAtualFechado++;
+        }
 
+        // ========================================================
+        // Linha 2: PRIORIDADE
+        // ========================================================
+        if(linhasAberto > 0){
+            matrizAberto[linhaAtualAberto][0] = '\0';
+        }
+        if(linhasAndamento > 0){
+            matrizAndamento[linhaAtualAndamento][0] = '\0';
+        }
+        if(linhasFechado > 0){
+            matrizFechado[linhaAtualFechado][0] = '\0';
+        }
+
+        if (fpUsed < fpQuant) {
+            matrizAberto[linhaAtualAberto][0] = '2'; // marca como prioridade
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%d", fp->elementos[fpUsed].prioridade);
+            linhaAtualAberto++;
+        } else if (fUsed < fQuant && atualFilaAberto) {
+            matrizAberto[linhaAtualAberto][0] = '2'; // marca como prioridade
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%d", atualFilaAberto->chamado.prioridade);
+            linhaAtualAberto++;
+        }
+
+        if (fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
+            matrizAndamento[linhaAtualAndamento][0] = '2'; // marca como prioridade
+            snprintf(matrizAndamento[linhaAtualAndamento] + 1, TAM_LINHA - 1, "%d", atualFilaAndamento->chamado.prioridade);
+            linhaAtualAndamento++;
+        }
+
+        if (fdUsed < fdQuant && atualFilaFechado) {
+            matrizFechado[linhaAtualFechado][0] = '2'; // marca como prioridade
+            snprintf(matrizFechado[linhaAtualFechado] + 1, TAM_LINHA - 1, "%d", atualFilaFechado->chamado.prioridade);
+            linhaAtualFechado++;
+        }
+
+        // ========================================================
+        // Linha 3: CRIADOR
+        // ========================================================
+        if(linhasAberto > 0){
+            matrizAberto[linhaAtualAberto][0] = '\0';
+        }
+        if(linhasAndamento > 0){
+            matrizAndamento[linhaAtualAndamento][0] = '\0';
+        }
+        if(linhasFechado > 0){
+            matrizFechado[linhaAtualFechado][0] = '\0';
+        }
+
+        if (fpUsed < fpQuant) {
+            matrizAberto[linhaAtualAberto][0] = '3'; // marca como criador
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s", fp->elementos[fpUsed].criador);
+            linhaAtualAberto++;
+        } else if (fUsed < fQuant && atualFilaAberto) {
+            matrizAberto[linhaAtualAberto][0] = '3'; // marca como criador
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s", atualFilaAberto->chamado.criador);
+            linhaAtualAberto++;
+        }
+        if (fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
+            matrizAndamento[linhaAtualAndamento][0] = '3'; // marca como criador
+            snprintf(matrizAndamento[linhaAtualAndamento] + 1, TAM_LINHA - 1, "%s", atualFilaAndamento->chamado.criador);
+            linhaAtualAndamento++;
+        }
+
+        if (fdUsed < fdQuant && atualFilaFechado) {
+            matrizFechado[linhaAtualFechado][0] = '3'; // marca como criador
+            snprintf(matrizFechado[linhaAtualFechado] + 1, TAM_LINHA - 1, "%s", atualFilaFechado->chamado.criador);
+            linhaAtualFechado++;
+        }
+        
+
+        // ========================================================
+        // Linha 4: DATA E HORA
+        // ========================================================
+        if(linhasAberto > 0){
+            matrizAberto[linhaAtualAberto][0] = '\0';
+        }
+        if(linhasAndamento > 0){
+            matrizAndamento[linhaAtualAndamento][0] = '\0';
+        }
+        if(linhasFechado > 0){
+            matrizFechado[linhaAtualFechado][0] = '\0';
+        }
+
+        if (fpUsed < fpQuant){
+            matrizAberto[linhaAtualAberto][0] = '4'; // marca como data e hora
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%02d/%02d/%04d %02d:%02d:%02d",
+                    fp->elementos[fpUsed].tempoComplexo.dia,
+                    fp->elementos[fpUsed].tempoComplexo.mes,
+                    fp->elementos[fpUsed].tempoComplexo.ano,
+                    fp->elementos[fpUsed].tempoComplexo.horas,
+                    fp->elementos[fpUsed].tempoComplexo.minutos,
+                    fp->elementos[fpUsed].tempoComplexo.segundos);
+            linhaAtualAberto++;
+        }
+        else if (fUsed < fQuant && atualFilaAberto) {
+            matrizAberto[linhaAtualAberto][0] = '4'; // marca como data e hora
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%02d/%02d/%04d %02d:%02d:%02d",
+                    atualFilaAberto->chamado.tempoComplexo.dia,
+                    atualFilaAberto->chamado.tempoComplexo.mes,
+                    atualFilaAberto->chamado.tempoComplexo.ano,
+                    atualFilaAberto->chamado.tempoComplexo.horas,
+                    atualFilaAberto->chamado.tempoComplexo.minutos,
+                    atualFilaAberto->chamado.tempoComplexo.segundos);
+            linhaAtualAberto++;
+        }
+        if (fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
+            matrizAndamento[linhaAtualAndamento][0] = '4'; // marca como data e hora
+            snprintf(matrizAndamento[linhaAtualAndamento] + 1, TAM_LINHA - 1, "%02d/%02d/%04d %02d:%02d:%02d",
+                    atualFilaAndamento->chamado.tempoComplexo.dia,
+                    atualFilaAndamento->chamado.tempoComplexo.mes,
+                    atualFilaAndamento->chamado.tempoComplexo.ano,
+                    atualFilaAndamento->chamado.tempoComplexo.horas,
+                    atualFilaAndamento->chamado.tempoComplexo.minutos,
+                    atualFilaAndamento->chamado.tempoComplexo.segundos);
+            linhaAtualAndamento++;
+        }
+
+        if (fdUsed < fdQuant && atualFilaFechado) {
+            matrizFechado[linhaAtualFechado][0] = '4'; // marca como data e hora
+            snprintf(matrizFechado[linhaAtualFechado] + 1, TAM_LINHA - 1, "%02d/%02d/%04d %02d:%02d:%02d",
+                    atualFilaFechado->chamado.tempoComplexo.dia,
+                    atualFilaFechado->chamado.tempoComplexo.mes,
+                    atualFilaFechado->chamado.tempoComplexo.ano,
+                    atualFilaFechado->chamado.tempoComplexo.horas,
+                    atualFilaFechado->chamado.tempoComplexo.minutos,
+                    atualFilaFechado->chamado.tempoComplexo.segundos);
+            linhaAtualFechado++;
+        }
+
+        // =============== LINHA VAZIA ==========================================
+        if(linhasAberto > 0){
+            matrizAberto[linhaAtualAberto][0] = '\0';
+        }
+        if(linhasAndamento > 0){
+            matrizAndamento[linhaAtualAndamento][0] = '\0';
+        }
+        if(linhasFechado > 0){
+            matrizFechado[linhaAtualFechado][0] = '\0';
+        }
+
+        if(fpUsed < fpQuant || (fUsed < fQuant && atualFilaAberto)) {
+            matrizAberto[linhaAtualAberto][0] = '0'; // marca como linha vazia
+            linhaAtualAberto++;
+        }
+        if(fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
+            matrizAndamento[linhaAtualAndamento][0] = '0'; // marca como linha vazia
+            linhaAtualAndamento++;
+        }
+        if(fdUsed < fdQuant && atualFilaFechado) {
+            matrizFechado[linhaAtualFechado][0] = '0'; // marca como linha vazia
+            linhaAtualFechado++;
+        }
+        
+
+        // ========================================================
+        // Linha 5+: DESCRIÇÃO (7 linhas max)
+        // ========================================================
+
+        if(linhasAberto > 0){
+            matrizAberto[linhaAtualAberto][0] = '\0';
+        }
+        if(linhasAndamento > 0){
+            matrizAndamento[linhaAtualAndamento][0] = '\0';
+        }
+        if(linhasFechado > 0){
+            matrizFechado[linhaAtualFechado][0] = '\0';
+        }
+
+        char desc1[7][50] = {0};
+        char desc2[7][50] = {0};
+        char desc3[7][50] = {0};
+
+        // fila de prioridade
+        if (fpUsed < fpQuant) {
+            // formatar string descricao (para nao ficar palavras cortadas na hora de printar)
+            quebrarDescricao(fp->elementos[fpUsed].descricao, desc1);
+            // guardar a descricao na matriz
+            int linha = 0;
+            while(desc1[linha][0] != '\0' && linha < 7) {
+                matrizAberto[linhaAtualAberto + linha][0] = '5'; // marca como descricao
+                snprintf(matrizAberto[linhaAtualAberto + linha] + 1, TAM_LINHA - 1, "%s", desc1[linha]);
+                linha++;
+            }
+            matrizAberto[linhaAtualAberto + linha][0] = '6'; // marca como separador
+            linhaAtualAberto += linha + 1;
+
+        // fila normal de aberto
+        } else if (fUsed < fQuant && atualFilaAberto) {
+            // formatar string descricao (para nao ficar palavras cortadas na hora de printar)
+            quebrarDescricao(atualFilaAberto->chamado.descricao, desc1);
+            // guardar a descricao na matriz
+            int linha = 0;
+            while(desc1[linha][0] != '\0' && linha < 7) {
+                matrizAberto[linhaAtualAberto + linha][0] = '5'; // marca como descricao
+                snprintf(matrizAberto[linhaAtualAberto + linha] + 1, TAM_LINHA - 1, "%s", desc1[linha]);
+                linha++;
+            }
+            matrizAberto[linhaAtualAberto + linha][0] = '6'; // marca como separador
+            linhaAtualAberto += linha + 1;
+        }
+
+        // fila normal de andamento
+        if (fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
+            // formatar string descricao (para nao ficar palavras cortadas na hora de printar)
+            quebrarDescricao(atualFilaAndamento->chamado.descricao, desc2);
+            // guardar a descricao na matriz
+
+            int linha = 0;
+            while(desc2[linha][0] != '\0' && linha < 7) {
+                matrizAndamento[linhaAtualAndamento + linha][0] = '5'; // marca como descricao
+                snprintf(matrizAndamento[linhaAtualAndamento + linha] + 1, TAM_LINHA - 1, "%s", desc2[linha]);
+                linha++;
+            }
+            matrizAndamento[linhaAtualAndamento + linha][0] = '6'; // marca como separador
+            linhaAtualAndamento += linha + 1;
+        }
+
+        if (fdUsed < fdQuant && atualFilaFechado) {
+            // formatar string descricao (para nao ficar palavras cortadas na hora de printar)
+            quebrarDescricao(atualFilaFechado->chamado.descricao, desc3);
+            // guardar a descricao na matriz
+
+            int linha = 0;
+            while(desc3[linha][0] != '\0' && linha < 7) {
+                matrizFechado[linhaAtualFechado + linha][0] = '5'; // marca como descricao
+                snprintf(matrizFechado[linhaAtualFechado + linha] + 1, TAM_LINHA - 1, "%s", desc3[linha]);
+                linha++;
+            }
+            matrizFechado[linhaAtualFechado + linha][0] = '6'; // marca como separador
+            linhaAtualFechado += linha + 1;
+        }
+
+        // ========================================================
+        // Incrementa os contadores das filas
+        // ========================================================
+        if (fpUsed < fpQuant) {
+            fpUsed++;
+        } else if (fUsed < fQuant && atualFilaAberto) {
+            atualFilaAberto = atualFilaAberto->prox;
+            fUsed++;
+        }
+        if (fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
+            atualFilaAndamento = atualFilaAndamento->prox;
+            fAndamentoUsed++;
+        }
+        if (fdUsed < fdQuant && atualFilaFechado) {
+            atualFilaFechado = atualFilaFechado->prox;
+            fdUsed++;
+        }
+        // fim do loop while para guardar as informacoes nas matrizes
+    }
+
+    fflush(stdout);
+    // ========================================================
+    // imprimir as matrizes lado a lado
+    // ========================================================
+    int maxLinhas = linhaAtualAberto;
+    if (linhaAtualAndamento > maxLinhas) maxLinhas = linhaAtualAndamento;
+    if (linhaAtualFechado > maxLinhas) maxLinhas = linhaAtualFechado;
+
+    int indiceAtual = 0;
+    while (maxLinhas > 0) {
+        // imprimir linha
+        char firstCharAberto = ((indiceAtual < linhasAberto) ? matrizAberto[indiceAtual][0] : ' ');
+        char firstCharAndamento = ((indiceAtual < linhasAndamento) ? matrizAndamento[indiceAtual][0] : ' ');
+        char firstCharFechado = ((indiceAtual < linhasFechado) ? matrizFechado[indiceAtual][0] : ' ');
+
+        // ---------------------------------------------------------
+        switch (firstCharAberto)
+        {
+        case '0':
+            // linha vazia
+            printf(GREEN"| %-50s |"RESET, "");
+            break;
+        case '1':
+            // titulo
+            printf("%s| %s%-50s %s|"RESET, GREEN, BLUE, matrizAberto[indiceAtual] + 1, GREEN);
+            break;
+
+        case '2':
+            // prioridade
+            printf("%s| %sPrioridade: %s%-38s %s|"RESET, GREEN, MAGENTA, WHITE, matrizAberto[indiceAtual] + 1, GREEN);
+            break;
+        case '3':
+            // criador
+            printf("%s| %sCriador: %s%-41s %s|"RESET, GREEN, MAGENTA, WHITE, matrizAberto[indiceAtual] + 1, GREEN);
+            break;
+        case '4':
+            // data e hora
+            printf("%s| %sData e Hora: %s%-37s %s|"RESET, GREEN, MAGENTA, WHITE, matrizAberto[indiceAtual] + 1, GREEN);
+            break;
+        case '5':
+            // descricao
+            printf("%s| %s%-50s %s|"RESET, GREEN, CYAN, matrizAberto[indiceAtual] + 1, GREEN);
+            break;
+        case '6':
+            // separador
+            printf(GREEN" +--------------------------------------------------+"RESET);
+            break;
+        default:
+            // linha vazia
+            printf("%-54s", "");
+            break;
+        }
+        printf("   ");
+
+        // ---------------------------------------------------------
+        switch (firstCharAndamento)
+        {
+        case '0':
+            // linha vazia
+            printf(YELLOW"| %-50s |"RESET, "");
+            break;
+        case '1':
+            // titulo
+            printf("%s| %s%-50s %s|"RESET, YELLOW, BLUE, matrizAndamento[indiceAtual] + 1, YELLOW);
+            break;
+
+        case '2':
+            // prioridade
+            printf("%s| %sPrioridade: %s%-38s %s|"RESET, YELLOW, MAGENTA, WHITE, matrizAndamento[indiceAtual] + 1, YELLOW);
+            break;
+        case '3':
+            // criador
+            printf("%s| %sCriador: %s%-41s %s|"RESET, YELLOW, MAGENTA, WHITE, matrizAndamento[indiceAtual] + 1, YELLOW);
+            break;
+        case '4':
+            // data e hora
+            printf("%s| %sData e Hora: %s%-37s %s|"RESET, YELLOW, MAGENTA, WHITE, matrizAndamento[indiceAtual] + 1, YELLOW);
+            break;
+        case '5':
+            // descricao
+            printf("%s| %s%-50s %s|"RESET, YELLOW, CYAN, matrizAndamento[indiceAtual] + 1, YELLOW);
+            break;
+        case '6':
+            // separador
+            printf(YELLOW" +--------------------------------------------------+"RESET);
+            break;
+        default:
+            // linha vazia
+            printf("%-54s", "");
+            break;
+        }
+        printf("   ");
+
+        // ---------------------------------------------------------
+        switch (firstCharFechado)
+        {
+        case '0':
+            // linha vazia
+            printf(RED"| %-50s |"RESET, "");
+            break;
+        case '1':
+            // titulo
+            printf("%s| %s%-50s %s|"RESET, RED, BLUE, matrizFechado[indiceAtual] + 1, RED);
+            break;
+
+        case '2':
+            // prioridade
+            printf("%s| %sPrioridade: %s%-38s %s|"RESET, RED, MAGENTA, WHITE, matrizFechado[indiceAtual] + 1, RED);
+            break;
+        case '3':
+            // criador
+            printf("%s| %sCriador: %s%-41s %s|"RESET, RED, MAGENTA, WHITE, matrizFechado[indiceAtual] + 1, RED);
+            break;
+        case '4':
+            // data e hora
+            printf("%s| %sData e Hora: %s%-37s %s|"RESET, RED, MAGENTA, WHITE, matrizFechado[indiceAtual] + 1, RED);
+            break;
+        case '5':
+            // descricao
+            printf("%s| %s%-50s %s|"RESET, RED, CYAN, matrizFechado[indiceAtual] + 1, RED);
+            break;
+        case '6':
+            // separador
+            printf(RED" +--------------------------------------------------+"RESET);
+            break;
+        default:
+            // linha vazia
+            printf("%-54s", "");
+            break;
+        }
+        printf("\n");
         fflush(stdout);
+        indiceAtual++;
+        maxLinhas--;
+    }
+
+    // liberar memoria
+    if(linhasAberto > 0){
+        for (int i = 0; i < (fQuant+fpQuant) * 14; i++) {
+            free(matrizAberto[i]);
+        }
+        free(matrizAberto);
+    }
+    if(linhasAndamento > 0){
+        for (int i = 0; i < fAndamentoQuant * 14; i++) {
+            free(matrizAndamento[i]);
+        }
+        free(matrizAndamento);
+    }
+    if(linhasFechado > 0){
+        for (int i = 0; i < fdQuant * 14; i++) {
+            free(matrizFechado[i]);
+        }
+        free(matrizFechado);
     }
 }
 

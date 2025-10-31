@@ -52,7 +52,7 @@ void login(int codigoErro){
     fflush(stdout); // previnir que o Usuario nao seja printado
     
     int escVerification = 0; // variavel para verificar se o ESC foi indentificado no inputASCII
-    inputASCII(holderUsr, 50, GREEN, &escVerification); // ler input
+    inputASCII(holderUsr, 40, GREEN, &escVerification); // ler input
     
     if(escVerification){
         // se for pressionado o esc retorna para o primeiro menu

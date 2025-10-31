@@ -12,6 +12,7 @@ typedef struct Estruturas{
     fila* filaNormal;
     filaPrioridade* filaPrioridade;
     filaDupla* filadupla;
+    fila* filaAndamento;
     // duplamente
 }Estruturas;
 
@@ -62,7 +63,6 @@ void inputNumeroASCII(char *buffer, int maxChars, const char *color, int *escVer
 
 // funcao para inicilar as estruturas
 void initEstruturas(Estruturas* estruturas);
-
 
 //funcao para limpar o terminal
 void clear(void);

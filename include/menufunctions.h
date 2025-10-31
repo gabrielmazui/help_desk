@@ -47,12 +47,12 @@ typedef struct Tempo{
 // struct para chamados
 typedef struct chamado{
     int status;
-    char titulo[51];
-    char descricao[551];
+    char titulo[60];
+    char descricao[350];
     int prioridade; 
     time_t tempoSimples;
     Tempo tempoComplexo;
-    char criador[51];
+    char criador[50];
 }chamado;
 
 // status = 1 (aberto)
