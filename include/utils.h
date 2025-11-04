@@ -16,6 +16,9 @@ typedef struct Estruturas{
     // duplamente
 }Estruturas;
 
+extern Estruturas estruturasGlobais;
+extern int terminalPequenoAlertado;
+
 // tipo de tecla clicada
 typedef enum {
     KC_OTHER = 0,
@@ -24,7 +27,8 @@ typedef enum {
     KC_LEFT,
     KC_RIGHT,
     KC_ENTER,
-    KC_ESC
+    KC_ESC,
+    RESIZE_EVENT
 } KeyCode;
 
 
@@ -54,15 +58,19 @@ KeyCode userGetKey(void);
 // tambem cuida se foi pressionado ESC
 // tudo que foi escrito vai ir para o buffer
 // ele nao vai aceitar mais que a quantidade de maxChars dada como parametro
-void inputASCII(char *buffer, int maxChars, const char *color, int * escVerification);
+KeyCode inputASCII(char *buffer, int maxChars, const char *color, int printarExistente);
 
 // funcao de input limitado tambem
 // apenas para numeros inteiros
 // mesmo proposito da funcao anterior
-void inputNumeroASCII(char *buffer, int maxChars, const char *color, int *escVerification);
+KeyCode inputNumeroASCII(char *buffer, int maxChars, const char *color, int printarExistente);
+
+// funcao para atualizar apenas uma opcao do menu
+// vai mudar o conteudo de determinada linha
+void updateOption(int linha, const char* texto, const char* fundo, const char* cor);
 
 // funcao para inicilar as estruturas
-void initEstruturas(Estruturas* estruturas);
+void initEstruturas(void);
 
 //funcao para limpar o terminal
 void clear(void);

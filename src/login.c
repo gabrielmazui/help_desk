@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "colors.h"
 #include "carregamento.h"
+#include "terminal_utils.h"
 
 // funcao para printar o modelo do menu do login
 static void loginHeader(int type){
@@ -42,23 +43,42 @@ void login(int codigoErro){
     
     const char USUARIO[50] = "mazui";
     const char senha[50] = "mazui123";
-    
-    char holderUsr[50];
-    char holderSenha[50];
-    
+
+    char holderUsr[50] = "";
+    char holderSenha[50] = "";
+
+    holderUsr[0] = '\0';
+    holderSenha[0] = '\0';
+
     loginHeader(codigoErro);
     
     printf("Usuario: ");
     fflush(stdout); // previnir que o Usuario nao seja printado
     
-    int escVerification = 0; // variavel para verificar se o ESC foi indentificado no inputASCII
-    inputASCII(holderUsr, 40, GREEN, &escVerification); // ler input
-    
-    if(escVerification){
-        // se for pressionado o esc retorna para o primeiro menu
-        clear();
-        return;
+    int mostrarBuffer = 1;
+    while(1){
+        KeyCode k = inputASCII(holderUsr, 40, GREEN, mostrarBuffer); // ler input
+        if(k == KC_ESC){
+            clear();
+            return;
+        }else if(k == RESIZE_EVENT){
+            esperar_tamanho_minimo(10, 60);
+            if(terminalPequenoAlertado){
+                terminalPequenoAlertado = 0;
+                clear();
+                loginHeader(codigoErro);
+                printf("Usuario: ");
+                mostrarBuffer = 1;
+                continue;
+            }
+            mostrarBuffer = 0;
+            continue;
+        }else{
+            break;
+        }
     }
+    codigoErro = 0; // resetar o codigo de erro para o proximo passo
+
     if(!compStr(holderUsr, USUARIO)){
         // se o usuario nao for encontrado
         clear();
@@ -70,13 +90,31 @@ void login(int codigoErro){
     printf("Usuario: %s%s\n"RESET, GREEN, holderUsr);
     printf("Senha: ");
     fflush(stdout);
-    
-    inputASCII(holderSenha, 50, GREEN, &escVerification); // ler input
-    
-    if(escVerification){
-        // se for pressionado o esc retorna para o primeiro menu
-        clear();
-        return;
+    mostrarBuffer = 1;
+    while(1){
+    KeyCode k2 = inputASCII(holderSenha, 50, GREEN, mostrarBuffer); // ler input
+        if(k2 == KC_ESC){
+            // se for pressionado o esc retorna para o primeiro menu
+            clear();
+            return;
+        }else if(k2 == RESIZE_EVENT){
+            esperar_tamanho_minimo(10, 60);
+            if(terminalPequenoAlertado){
+                clear();
+                loginHeader(codigoErro);
+                printf("Usuario: %s%s\n"RESET, GREEN, holderUsr);
+                printf("Senha: ");
+                fflush(stdout);
+                terminalPequenoAlertado = 0;
+                mostrarBuffer = 1;
+                continue;
+            }
+            mostrarBuffer = 0;
+            continue;
+        }
+        else {
+            break;
+        }
     }
     if(!compStr(holderSenha, senha)){
         // se a senha estiver errada

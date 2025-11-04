@@ -17,10 +17,15 @@
 #include "fila.h"
 #include "filaprioridade.h"
 #include "filadupla.h"
+#include "utils.h"
+#include "terminal_utils.h"
 
 #ifdef _WIN32
 #include <windows.h> // apenas no Windows
 #endif
+
+Estruturas estruturasGlobais = {0};
+int terminalPequenoAlertado = 0;
 
 void controlarCursor(int visible) {
     // controla visibilidade do cursor de texto windows e linux/macOS
@@ -86,187 +91,522 @@ char getChar(void) {
 // meio complicado a tecla ESC, pois as setas em si comecam com ESC
 // o ESC sozinho e 27 na tabela ASCII
 // e as setas tambem comecam com isso
+
+/// @brief  Função para ler a tecla pressionada pelo usuário. 
+/// @return keycode correspondente à tecla pressionada.
+
 KeyCode userGetKey(void) {
 #ifdef _WIN32
-    char c = getChar();
+    while (1) {
+        // Detecta resize primeiro
+        if (houve_resize())
+            return RESIZE_EVENT;
 
-    if (c == 0 || c == -32) { // tecla especial no Windows
-        char arrow = getChar();
-        switch (arrow) {
-            case 72: return KC_UP;
-            case 80: return KC_DOWN;
-            case 75: return KC_LEFT;
-            case 77: return KC_RIGHT;
-            default: return KC_OTHER;
+        // Verifica se há tecla pressionada
+        if (_kbhit()) {
+            int c = _getch();
+
+            // Teclas especiais (setas)
+            if (c == 0 || c == 224) { 
+                int arrow = _getch();
+                switch (arrow) {
+                    case 72: return KC_UP;
+                    case 80: return KC_DOWN;
+                    case 75: return KC_LEFT;
+                    case 77: return KC_RIGHT;
+                    default: return KC_OTHER;
+                }
+            }
+
+            // ESC
+            else if (c == 27) return KC_ESC;
+
+            // Enter
+            else if (c == 13) return KC_ENTER;
+
+            // Outras teclas
+            else return KC_OTHER;
         }
-    } else if (c == 27) {
-        return KC_ESC;
-    } else if (c == '\r') {
-        return KC_ENTER;
-    }
-    return KC_OTHER;
 
-#else
+        Sleep(1); // loop leve
+    }
+
+#else // Linux / macOS
+    struct termios oldt, newt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO); // modo raw
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+    fd_set set;
+    struct timeval timeout;
+    unsigned char c = 0;
+
+    while (1) {
+        // Detecta resize primeiro
+        if (houve_resize()) {
+            tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+            return RESIZE_EVENT;
+        }
+
+        FD_ZERO(&set);
+        FD_SET(STDIN_FILENO, &set);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 1000; // 1ms
+
+        int rv = select(STDIN_FILENO + 1, &set, NULL, NULL, &timeout);
+        if (rv > 0 && FD_ISSET(STDIN_FILENO, &set)) {
+            read(STDIN_FILENO, &c, 1);
+
+            // Setas via sequência ANSI
+            if (c == 27) { 
+                unsigned char seq[2] = {0,0};
+                usleep(5000);
+                int bytesWaiting = 0;
+                ioctl(STDIN_FILENO, FIONREAD, &bytesWaiting);
+                if (bytesWaiting >= 2) {
+                    read(STDIN_FILENO, &seq, 2);
+                    if (seq[0] == '[') {
+                        switch (seq[1]) {
+                            case 'A': tcsetattr(STDIN_FILENO, TCSANOW, &oldt); return KC_UP;
+                            case 'B': tcsetattr(STDIN_FILENO, TCSANOW, &oldt); return KC_DOWN;
+                            case 'C': tcsetattr(STDIN_FILENO, TCSANOW, &oldt); return KC_RIGHT;
+                            case 'D': tcsetattr(STDIN_FILENO, TCSANOW, &oldt); return KC_LEFT;
+                        }
+                    }
+                }
+                tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+                return KC_ESC;
+            }
+
+            // Enter
+            else if (c == '\r' || c == '\n') {
+                tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+                return KC_ENTER;
+            }
+
+            // Qualquer outra tecla
+            else {
+                tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+                return KC_OTHER;
+            }
+        }
+        // rv == 0 → timeout, apenas continua o loop
+    }
+#endif
+}
+
+static void limparBufferStdin() {
+    // limpa o buffer do stdin
+    #ifdef _WIN32
+        while (_kbhit()) {
+            _getch();
+        }
+    #else
+        tcflush(STDIN_FILENO, TCIFLUSH); // descarta dados de entrada pendentes
+    #endif
+}
+
+/// @brief Função para ler uma entrada de texto ASCII
+/// @param buffer O buffer onde a entrada será armazenada
+/// @param maxChars O número máximo de caracteres a serem lidos
+/// @param color A cor do texto a ser exibido
+/// @param printarExistente Se deve ou não imprimir o texto existente no buffer
+/// @return O código da tecla pressionada
+KeyCode inputASCII(char *buffer, int maxChars, const char *color, int printarExistente) {
+    int qCharsLinhas[7] = {0}; // chars visuais de cada linha
+    int linhaStart[7] = {0};   // índice no buffer onde cada linha começa
+    int linhaAtual = 0;
+    limparBufferStdin();
+    controlarCursor(1);
+    int bufferLen = strlen(buffer);
+    int currentLineCharsVisual = 0; // chars na tela
+    char c = 0;
+
+    printf("%s", color);
+
+    // ================== PRINTA TEXTO EXISTENTE ==================
+    if (printarExistente && bufferLen > 0) {
+        linhaStart[linhaAtual] = 0;
+        if(currentLineCharsVisual != 0){
+            putchar(' '); // espaço inicial
+        }
+        currentLineCharsVisual++;
+
+        for (int i = 0; i < bufferLen; i++) {
+            putchar(buffer[i]);
+            fflush(stdout);
+            currentLineCharsVisual++;
+
+            if (currentLineCharsVisual >= 50) {
+                // procura o último espaço na linha atual
+                int breakPos = -1;
+                for (int k = i; k >= linhaStart[linhaAtual]; k--) {
+                    if (buffer[k] == ' ') {
+                        breakPos = k;
+                        break;
+                    }
+                }
+                if (breakPos == -1) breakPos = i;
+
+                int charsRestantes = i - breakPos;
+
+                // atualiza qCharsLinhas antes de mover a palavra
+                qCharsLinhas[linhaAtual] = breakPos - linhaStart[linhaAtual] + 1; // +1 espaço inicial
+
+                // apaga palavra cortada
+                for (int j = i; j > breakPos; j--) printf("\b \b");
+
+                printf("\n%s", color); // nova linha
+                putchar(' ');
+                fflush(stdout);
+
+                linhaAtual++;
+                if (linhaAtual >= 7) linhaAtual = 6; // segurança
+                linhaStart[linhaAtual] = breakPos + 1;
+                currentLineCharsVisual = charsRestantes + 1; // +1 espaço inicial
+
+                // imprime os chars restantes
+                for (int j = 0; j < charsRestantes; j++)
+                    putchar(buffer[linhaStart[linhaAtual] + j]);
+                fflush(stdout);
+
+                i = breakPos + charsRestantes; // ajusta índice do loop
+            }
+        }
+    }
+    fflush(stdout);
+
+    // ================== LOOP DE ENTRADA ==================
+    #ifdef _WIN32
+    while (1) {
+        if (houve_resize()) return RESIZE_EVENT;
+        if (_kbhit()) {
+            c = getChar();
+
+            if (c == 27) return KC_ESC; controlarCursor(0);
+            if (c == '\r') break;
+
+            // -------- BACKSPACE ----------
+            if (c == 127 || c == '\b') {
+                if (bufferLen > 0) {
+                    bufferLen--;
+                    buffer[bufferLen] = '\0';
+                    currentLineCharsVisual--;
+                    printf("\b \b");
+                    fflush(stdout);
+
+                    if (currentLineCharsVisual <= 0 && linhaAtual > 0) {
+                        linhaAtual--;
+                        printf("\033[A"); // sobe linha
+                        printf("\033[%dG", qCharsLinhas[linhaAtual] + 1); // vai pro final da linha acima (+1 espaço)
+                        fflush(stdout);
+                        currentLineCharsVisual = qCharsLinhas[linhaAtual];
+                    }
+                }
+            }
+
+            // -------- CARACTERE VISÍVEL ----------
+            else if (c >= 32 && c < 127) {
+                if (bufferLen < maxChars - 1) {
+                    if (c == ' ' && bufferLen == 0) continue;
+                    if (c == ' ' && buffer[bufferLen - 1] == ' ') continue;
+
+                    buffer[bufferLen++] = c;
+                    buffer[bufferLen] = '\0';
+                    putchar(c);
+                    fflush(stdout);
+                    currentLineCharsVisual++;
+
+                    // quebra de linha automática
+                    if (currentLineCharsVisual >= 50) {
+                        // procura o último espaço da linha atual
+                        int breakPos = -1;
+                        for (int k = bufferLen - 1; k >= linhaStart[linhaAtual]; k--) {
+                            if (buffer[k] == ' ') {
+                                breakPos = k;
+                                break;
+                            }
+                        }
+                        if (breakPos == -1) breakPos = bufferLen - 1;
+
+                        int charsRestantes = bufferLen - (breakPos + 1);
+
+                        // atualiza qCharsLinhas da linha atual
+                        qCharsLinhas[linhaAtual] = breakPos - linhaStart[linhaAtual] + 1;
+
+                        // apaga palavra cortada
+                        for (int j = bufferLen - 1; j > breakPos; j--) printf("\b \b");
+
+                        printf("\n%s", color);
+                        putchar(' ');
+                        fflush(stdout);
+
+                        linhaAtual++;
+                        if (linhaAtual >= 7) linhaAtual = 6;
+                        linhaStart[linhaAtual] = breakPos + 1;
+                        currentLineCharsVisual = charsRestantes + 1;
+
+                        for (int j = 0; j < charsRestantes; j++)
+                            putchar(buffer[linhaStart[linhaAtual] + j]);
+                        fflush(stdout);
+
+                        bufferLen = breakPos + charsRestantes + 1; // ajusta bufferLen
+                    }
+                }
+            }
+        }
+        Sleep(1);
+    }
+
+#else // Linux / macOS
     struct termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    unsigned char c = 0;
-    read(STDIN_FILENO, &c, 1);
+    fd_set set;
+    struct timeval timeout;
 
-    if (c == 27) { // ESC ou sequência ANSI
-        usleep(5000); // dá tempo pros bytes chegarem (5 ms)
-        int bytesWaiting = 0;
-        ioctl(STDIN_FILENO, FIONREAD, &bytesWaiting);
+    while (1) {
+        if (houve_resize()) {
+            tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+            return RESIZE_EVENT;
+        }
 
-        if (bytesWaiting >= 2) {
-            char seq[2];
-            read(STDIN_FILENO, &seq, 2);
-            if (seq[0] == '[') {
-                switch (seq[1]) {
-                    case 'A': tcsetattr(STDIN_FILENO, TCSANOW, &oldt); return KC_UP;
-                    case 'B': tcsetattr(STDIN_FILENO, TCSANOW, &oldt); return KC_DOWN;
-                    case 'C': tcsetattr(STDIN_FILENO, TCSANOW, &oldt); return KC_RIGHT;
-                    case 'D': tcsetattr(STDIN_FILENO, TCSANOW, &oldt); return KC_LEFT;
+        FD_ZERO(&set);
+        FD_SET(STDIN_FILENO, &set);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 1000;
+
+        int rv = select(STDIN_FILENO + 1, &set, NULL, NULL, &timeout);
+        if (rv > 0 && FD_ISSET(STDIN_FILENO, &set)) {
+            read(STDIN_FILENO, &c, 1);
+
+            if (c == 27) { // ESC
+                tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+                controlarCursor(0);
+                return KC_ESC;
+            }
+            if (c == '\r' || c == '\n') break;
+
+            // -------- BACKSPACE ----------
+            if (c == 127 || c == '\b') {
+                if (bufferLen > 0) {
+                    bufferLen--;
+                    buffer[bufferLen] = '\0';
+                    currentLineCharsVisual--;
+                    printf("\b \b");
+                    fflush(stdout);
+
+                    if (currentLineCharsVisual <= 0 && linhaAtual > 0) {
+                        linhaAtual--;
+                        printf("\033[A"); // sobe linha
+                        printf("\033[%dG", qCharsLinhas[linhaAtual] + 1); // final da linha acima
+                        fflush(stdout);
+                        currentLineCharsVisual = qCharsLinhas[linhaAtual];
+                    }
+                }
+            }
+
+            // -------- CARACTERE VISÍVEL ----------
+            else if (c >= 32 && c < 127) {
+                if (bufferLen < maxChars - 1) {
+                    if (c == ' ' && bufferLen == 0) continue;
+                    if (c == ' ' && buffer[bufferLen - 1] == ' ') continue;
+
+                    buffer[bufferLen++] = c;
+                    buffer[bufferLen] = '\0';
+                    putchar(c);
+                    fflush(stdout);
+                    currentLineCharsVisual++;
+
+                    // quebra de linha automática
+                    if (currentLineCharsVisual >= 50) {
+                        // procura último espaço da linha atual
+                        int breakPos = -1;
+                        for (int k = bufferLen - 1; k >= linhaStart[linhaAtual]; k--) {
+                            if (buffer[k] == ' ') {
+                                breakPos = k;
+                                break;
+                            }
+                        }
+                        if (breakPos == -1) breakPos = bufferLen - 1;
+
+                        int charsRestantes = bufferLen - (breakPos + 1);
+
+                        // atualiza qCharsLinhas da linha atual
+                        qCharsLinhas[linhaAtual] = breakPos - linhaStart[linhaAtual] + 1;
+
+                        // apaga palavra cortada
+                        for (int j = bufferLen - 1; j > breakPos; j--) printf("\b \b");
+
+                        printf("\n%s", color);
+                        putchar(' '); // espaço inicial da nova linha
+                        fflush(stdout);
+
+                        linhaAtual++;
+                        if (linhaAtual >= 7) linhaAtual = 6;
+                        linhaStart[linhaAtual] = breakPos + 1;
+                        currentLineCharsVisual = charsRestantes + 1;
+
+                        // imprime chars restantes
+                        for (int j = 0; j < charsRestantes; j++)
+                            putchar(buffer[linhaStart[linhaAtual] + j]);
+                        fflush(stdout);
+
+                        bufferLen = breakPos + charsRestantes + 1; // ajusta bufferLen
+                    }
                 }
             }
         }
-        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-        return KC_ESC; // ESC isolado
-    } 
-    else if (c == '\n' || c == '\r') {
-        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-        return KC_ENTER;
     }
 
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    return KC_OTHER;
 #endif
+
+    buffer[bufferLen] = '\0';
+    printf(RESET);
+    controlarCursor(0);
+    return 0;
 }
 
-void inputASCII(char *buffer, int maxChars, const char *color, int *escVerification) {
-    controlarCursor(1); // mostra o cursor durante a entrada
-    int len = 0;
-    char c;
-    int currentLineChars = 0;
 
+/// @brief Função para ler uma entrada numérica ASCII
+/// @param buffer O buffer onde a entrada será armazenada
+/// @param maxChars O número máximo de caracteres a serem lidos
+/// @param color A cor do texto a ser exibido
+/// @param printarExistente Se deve ou não imprimir o texto existente no buffer
+/// @return O código da tecla pressionada
+KeyCode inputNumeroASCII(char *buffer, int maxChars, const char *color, int printarExistente) {
+    limparBufferStdin();
+    controlarCursor(1); // mostra o cursor
+    int len = strlen(buffer); // conta se já há algo escrito
+    char c = 0;
+
+    // imprime conteúdo existente se solicitado
+    if (printarExistente && len > 0) {
+        printf("%s%s" RESET, color, buffer);
+        fflush(stdout);
+    }
+
+#ifdef _WIN32
     while (1) {
-        c = getChar();
+        // checa redimensionamento
+        if (houve_resize()) return RESIZE_EVENT;
 
-        if (c == '\r' || c == '\n') {
-            // Enter encerra apenas se algo foi digitado
-            if (len == 0) {
-                printf("%sTexto invalido%s\n", RED, RESET);
-                printf("%s", color);
-                fflush(stdout);
-                continue;
-            }
-            break;
-        } 
-        else if (c == 127 || c == '\b') {
-            // Backspace
-            
-            if (len > 0) {
-                if (currentLineChars == 0) {
-                    // sobe uma linha
-                    printf("\033[A"); // ANSI: move o cursor uma linha pra cima
-                    // vai pro fim da linha anterior
-                    printf("\033[50C"); // move 50 colunas pra direita (ou o número real de chars da linha anterior)
+        // leitura não bloqueante
+        if (_kbhit()) {
+            c = getChar();
+
+            if (c == '\r' || c == '\n') break; // Enter
+
+            else if (c == 127 || c == '\b') {  // Backspace
+                if (len > 0) {
+                    len--;
+                    buffer[len] = '\0';
+                    printf("\b \b");
                     fflush(stdout);
-                    currentLineChars = 50; // volta pro fim da linha anterior
                 }
-                len--;
-                buffer[len] = '\0';
-                printf("\b \b");
-                fflush(stdout);
-                currentLineChars--;
-                if (currentLineChars < 0) currentLineChars = 0;
+            }
+
+            else if ((unsigned char)c == 27) { // ESC
+                controlarCursor(0);
+                return KC_ESC;
+            }
+
+            else if (c >= '0' && c <= '9') { // apenas números
+                if (len < maxChars - 1) {
+                    buffer[len++] = c;
+                    buffer[len] = '\0';
+                    printf("%s%c" RESET, color, c);
+                    fflush(stdout);
+                }
             }
         }
-        else if ((unsigned char)c == 27) {
-            // ESC
-            *escVerification = 1;
-            break;
-        } 
-        else if (c >= 32 && c < 127) {
-            // Só aceita caracteres visíveis
-            if (len < maxChars - 1) {
-                
-                if (c == ' ' && len == 0)
-                    continue;
 
-                if (c == ' ' && buffer[len - 1] == ' ')
-                    continue;
+        Sleep(1); // evita uso excessivo de CPU
+    }
 
-                buffer[len++] = c;
-                printf("%s%c" RESET, color, c);
-                fflush(stdout);
+#else // Linux / macOS
 
-                currentLineChars++;
+    struct termios oldt, newt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-                // 🔹 quebra a linha a cada 50 caracteres
-                if (currentLineChars >= 50) {
-                    printf("\n%s ", color);
+    fd_set set;
+    struct timeval timeout;
+
+    while (1) {
+        // checa redimensionamento
+        if (houve_resize()) {
+            tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+            return RESIZE_EVENT;
+        }
+
+        FD_ZERO(&set);
+        FD_SET(STDIN_FILENO, &set);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 1000; // 1ms
+
+        int rv = select(STDIN_FILENO + 1, &set, NULL, NULL, &timeout);
+        if (rv > 0 && FD_ISSET(STDIN_FILENO, &set)) {
+            read(STDIN_FILENO, &c, 1);
+
+            if (c == '\r' || c == '\n') break; // Enter
+
+            else if (c == 127 || c == '\b') {  // Backspace
+                if (len > 0) {
+                    len--;
+                    buffer[len] = '\0';
+                    printf("\b \b");
                     fflush(stdout);
-                    currentLineChars = 0;
+                }
+            }
+
+            else if ((unsigned char)c == 27) { // ESC
+                tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+                controlarCursor(0);
+                return KC_ESC;
+            }
+
+            else if (c >= '0' && c <= '9') { // apenas números
+                if (len < maxChars - 1) {
+                    buffer[len++] = c;
+                    buffer[len] = '\0';
+                    printf("%s%c" RESET, color, c);
+                    fflush(stdout);
                 }
             }
         }
     }
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+#endif
+
+    controlarCursor(0); // esconde o cursor
     buffer[len] = '\0';
-    controlarCursor(0); // esconde o cursor após a entrada
+    return 0; // deu tudo certo
 }
 
-
-// funcao semelhante a anterior
-// porem essa le apenas numeros
-void inputNumeroASCII(char *buffer, int maxChars, const char *color, int *escVerification) {
-    controlarCursor(1); // mostra o cursor durante a entrada
-    int len = 0;
-    char c;
-
-    while (1) {
-        c = getChar(); // sua função de input
-
-        if (c == '\r' || c == '\n') {
-            break; // Enter
-        } 
-        else if (c == 127 || c == '\b') { // Backspace
-            if (len > 0) {
-                len--;
-                buffer[len] = '\0';
-                printf("\b \b");
-                fflush(stdout);
-            }
-        } 
-        else if ((unsigned char)c == 27) { // ESC
-            *escVerification = 1;
-            break;
-        } 
-        else if (c >= '0' && c <= '9') { // aceita apenas dígitos
-            if (len < maxChars) {
-                buffer[len++] = c;
-                printf("%s%c" RESET, color, c);
-                fflush(stdout);
-            }
-        }
-        // qualquer outro caractere é ignorado
-    }
-    controlarCursor(0); // esconde o cursor após a entrada
-    buffer[len] = '\0';
+// funcao para atualizar apenas uma opcao do menu
+void updateOption(int linha, const char* texto, const char* fundo, const char* cor) {
+    printf("\033[%d;1H\033[K", linha); // move para linha e coluna 1 e limpa a linha
+    printf(" %s%s%s\n" RESET, fundo, cor, texto);
+    fflush(stdout);
 }
-
-
 
 // funcao para inicializar todas as estruturas
-void initEstruturas(Estruturas* estruturas){
-    estruturas->pil = criarPilha();
-    estruturas->filaNormal = criarFila();
-    estruturas->filaPrioridade = criarFilaPrioridade();
-    estruturas->filadupla = criarFilaDupla();
-    estruturas->filaAndamento = criarFila();
+void initEstruturas(void){
+    
+    estruturasGlobais.pil = criarPilha();
+    estruturasGlobais.filaNormal = criarFila();
+    estruturasGlobais.filaPrioridade = criarFilaPrioridade();
+    estruturasGlobais.filadupla = criarFilaDupla();
+    estruturasGlobais.filaAndamento = criarFila();
 }
 
 // funcao para limpar a tela

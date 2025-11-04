@@ -11,6 +11,7 @@
 #include "colors.h"
 #include "utils.h"
 #include "login.h"
+#include "terminal_utils.h"
 
 // funcao para ficar reescrevendo as opcoes conforme o selecionado
 void updateMenuSelection(int selected){
@@ -39,13 +40,28 @@ int main(){
     controlarCursor(0);
     clear();
     int selected = 1; // int para guardar opcao selecionada 
-        
+    esperar_tamanho_minimo(7, 25);
+    if(terminalPequenoAlertado){
+        clear();
+        terminalPequenoAlertado = 0;
+    }
+    desenharPrimeiroMenu();
     while(1){
-        desenharPrimeiroMenu();
         // loop que vai ficar lendo as setas para cima e para baixo ate receber enter
         while(1){
             KeyCode teclaEscolhida = userGetKey();
-            if(teclaEscolhida == KC_ENTER){
+            if(teclaEscolhida == RESIZE_EVENT){
+                esperar_tamanho_minimo(7, 25);
+                if(terminalPequenoAlertado){
+                    clear();
+                    terminalPequenoAlertado = 0;
+                    desenharPrimeiroMenu();
+                    updateMenuSelection(selected);
+                }
+                
+                continue;
+            }
+            else if(teclaEscolhida == KC_ENTER){
                 break;
             }else if(teclaEscolhida == KC_DOWN){
                 if(selected == 1){

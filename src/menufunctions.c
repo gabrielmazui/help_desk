@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+#include <math.h>
 
 #include "menu.h"
 #include "pilha.h"
@@ -11,6 +12,7 @@
 #include "menufunctions.h"
 #include "colors.h"
 #include "filadupla.h"
+#include "terminal_utils.h"
 
 #define TAM_LINHA 52
 
@@ -32,24 +34,13 @@ static Tempo tempoAgora(void){
 }
 
 // funcao para o menu de criar chamado (preferencia e tiulo do chamado)
-static void menuCriarChamadoHandler(int prioridadeParametro, int comPreferencia, Estruturas dados, char* user){
-    // menu tipo 3
-
-    // 1 = Sim
-    // 2 = nao
-
-    // caso preferencia for maior que 0, significa que ja foi escolhido
-    // entao pode ir para o proximo passo
-
-    char tituloChamada[50]; // buffer para o titulo da chamada
-    int prioridade = prioridadeParametro; // padrao 0 
-    
-    char* pergunta = "Qual a prioridade desse chamado?";
-    int entradaErrada = 0;
-    // descobre a prioridade , caso tiver
-    if(comPreferencia == 1 && prioridade == 0){
-        while(1){
-            printf("\n");
+static void criarChamadoPrintMenu(int type, int entradaErrada){
+    char* pergunta1 = "Qual a prioridade desse chamado?";
+    char* pergunta2 = "Qual o titulo do chamado?";
+    char* pergunta3 = "Descreva melhor o seu problema:";
+    switch(type){
+        // 
+        case 1:
             repetirChar(15, '-', BLUE);
             printf(BLUE"%s"RESET, "Criar chamado");
             repetirChar(15, '-', BLUE);
@@ -58,93 +49,166 @@ static void menuCriarChamadoHandler(int prioridadeParametro, int comPreferencia,
                 printf(RED" Escolha um numero maior que 0"RESET);
                 printf("\n");
             }
-            printf(GREEN" %s"RESET, pergunta);
+            printf(GREEN" %s"RESET, pergunta1);
             printf("\n\n ");
             fflush(stdout);
+            break;
+        case 2:
+            repetirChar(15, '-', BLUE);
+            printf(BLUE"%s"RESET, "Criar chamado");
+            repetirChar(15, '-', BLUE);
+            printf("\n");
             
-            char digitos[7];
-            int escVerification = 0;
+            printf(GREEN" %s"RESET, pergunta2);
+            printf("\n\n ");
+            fflush(stdout);
+            break;
+        case 3:
+            repetirChar(15, '-', BLUE);
+            printf(BLUE"%s"RESET, "Criar chamado");
+            repetirChar(15, '-', BLUE);
+            printf("\n");
+            
+            printf(GREEN" %s"RESET, pergunta3);
+            printf("\n\n ");
+            fflush(stdout);
+            break;
+    }
+}
+static void menuCriarChamadoHandler(int prioridade, int comPreferencia, char* user, char titulo[50], char descricao[350], int pularPrioridade){
+    // menu tipo 3
+
+    // 1 = Sim
+    // 2 = nao
+
+    // caso preferencia for maior que 0, significa que ja foi escolhido
+    // entao pode ir para o proximo passo 
+    
+    
+    int entradaErrada = 0;
+    // descobre a prioridade , caso tiver
+    int mostrarBuffer = 1;
+    if(comPreferencia == 1 && !pularPrioridade){
+        esperar_tamanho_minimo(10, 45);
+        clear();
+        criarChamadoPrintMenu(1, entradaErrada);
+        char digitos[7];
+        if(prioridade == 0){
+            digitos[0] = '\0';
+        }else{
+            sprintf(digitos, "%d", prioridade);
+        }
+        while(1){
+            
             // le o input de numero
-            inputNumeroASCII(digitos, sizeof(digitos) - 1, WHITE, &escVerification);
-            
-            // se tiver esc volta pro menu de pergunta se tem prioridade
-            if(escVerification){
-                popPilha(dados.pil);
+            KeyCode k = inputNumeroASCII(digitos, sizeof(digitos) - 1, WHITE, mostrarBuffer);
+            if(k == RESIZE_EVENT){
+                esperar_tamanho_minimo(10, 45);
+                if(terminalPequenoAlertado){
+                    terminalPequenoAlertado = 0;
+                    clear();
+                    criarChamadoPrintMenu(1, entradaErrada);
+                    mostrarBuffer = 1;
+                    continue;
+                }
+                mostrarBuffer = 0;
+                continue;
+            }
+            if(k == KC_ESC){
+                // se tiver esc volta pro menu de pergunta se tem prioridade
+                
+                popPilha(estruturasGlobais.pil);
                 clear();
                 return;
             }
             // transforma o vetor de char de digitos em numero    
-            for (int i = 0; digitos[i] != '\0'; i++) {
-                char c = digitos[i];
-                if (c >= '0' && c <= '9') {
-                    prioridade = prioridade * 10 + (c - '0'); // constrói o número
-                }
-            }
+            prioridade = atoi(digitos);
+            
             if(prioridade <= 0){
                 // continua o loop
                 clear();
                 entradaErrada = 1;
+                criarChamadoPrintMenu(1, entradaErrada);
             }else{
                 clear();
                 break;
             }
-            clear();
         }
     }
 
-
-    char* pergunta2 = "Qual o titulo do chamado?";
+    
     // parte 2
     // pergunta o titulo da chamada
-    printf("\n");
-    repetirChar(15, '-', BLUE);
-    printf(BLUE"%s"RESET, "Criar chamado");
-    repetirChar(15, '-', BLUE);
-    printf("\n");
-    
-    printf(GREEN" %s"RESET, pergunta2);
-    printf("\n\n ");
-    fflush(stdout);
-    
-    int escVerification = 0; // variavel para verificar se o ESC foi indentificado no inputASCII
-    inputASCII(tituloChamada, 40, WHITE, &escVerification); // ler input
-    // funcao para verificar se e uma string valida
-    if(escVerification){
-        // se for pressionado o esc retorna para o primeiro menu
-        clear();
-        if(comPreferencia){
-            // preferencia 0 para permitir que seja perguntado de novo
-            menuCriarChamadoHandler(0, comPreferencia, dados, user);
-        }else{
-            popPilha(dados.pil);
-            // caso nao tiver preferencia, volta para o menu de criar chamado
+    esperar_tamanho_minimo(10, 55);
+    clear();
+    criarChamadoPrintMenu(2, 0);
+    mostrarBuffer = 1;
+    while(1){
+        KeyCode k2 = inputASCII(titulo, 40, WHITE , mostrarBuffer); // ler input
+        // funcao para verificar se e uma string valida
+        if(k2 == RESIZE_EVENT){
+            esperar_tamanho_minimo(10, 55);
+            if(terminalPequenoAlertado){
+                terminalPequenoAlertado = 0;
+                clear();
+                criarChamadoPrintMenu(2, 0);
+                mostrarBuffer = 1;
+                continue;
+            }
+            mostrarBuffer = 0;
+            continue;
+        }else if(k2 == KC_ESC){
+            // se for pressionado o esc retorna para o primeiro menu
+            clear();
+            if(comPreferencia){
+                // preferencia 0 para permitir que seja perguntado de novo
+                menuCriarChamadoHandler(prioridade, comPreferencia, user, titulo, descricao, 0);
+            }else{
+                popPilha(estruturasGlobais.pil);
+                // caso nao tiver preferencia, volta para o menu de criar chamado
+            }
+            // chamo a funcao novamente, para voltar ao menu de qual a preferencia
+            // caso apertar o esc denovo, ele voltar para o menu de criar chamado original
+            return;
         }
-        // chamo a funcao novamente, para voltar ao menu de qual a preferencia
-        // caso apertar o esc denovo, ele voltar para o menu de criar chamado original
-        return;
+        if(strlen(titulo) == 0){
+            continue;
+        }
+        break;
     }
     clear();
     
     // descrever o problema
-    char* pergunta3 = "Descreva melhor o seu problema:";
-    printf("\n");
-    repetirChar(15, '-', BLUE);
-    printf(BLUE"%s"RESET, "Criar chamado");
-    repetirChar(15, '-', BLUE);
-    printf("\n");
-    
-    printf(GREEN" %s"RESET, pergunta3);
-    printf("\n\n ");
-    fflush(stdout);
-    char descricaoChamada[350]; // buffer para a descricao da chamada
-    escVerification = 0; // variavel para verificar se o ESC foi indentificado no inputASCII
-    inputASCII(descricaoChamada, 300, WHITE, &escVerification); // ler input
-    // funcao para verificar se e uma string valida
 
-    if(escVerification){
-        clear();
-        menuCriarChamadoHandler(prioridade, comPreferencia, dados, user);
-        return;
+    esperar_tamanho_minimo(13, 55);
+    clear();
+    criarChamadoPrintMenu(3, 0);
+    mostrarBuffer = 1;
+    while(1){
+        KeyCode k3 = inputASCII(descricao, 300, WHITE, mostrarBuffer); // ler input
+
+        if(k3 == RESIZE_EVENT){
+            esperar_tamanho_minimo(13, 55);
+            if(terminalPequenoAlertado){
+                terminalPequenoAlertado = 0;
+                clear();
+                criarChamadoPrintMenu(3, 0);
+                mostrarBuffer = 1;
+                continue;
+            }
+            mostrarBuffer = 0;
+            continue;
+        }else if(k3 == KC_ESC){
+            // se for pressionado o esc retorna para o primeiro menu
+            clear();
+            menuCriarChamadoHandler(prioridade, comPreferencia, user, titulo, descricao, 1);
+            return;
+        }
+        if(strlen(descricao) == 0){
+            // descricao invalida
+            continue;
+        }
+        break;
     }
     clear();
 
@@ -152,10 +216,10 @@ static void menuCriarChamadoHandler(int prioridadeParametro, int comPreferencia,
     chamado cham;
     cham.status = 1;
     
-    strncpy(cham.titulo, tituloChamada, sizeof(cham.titulo)-1);
+    strncpy(cham.titulo, titulo, sizeof(cham.titulo)-1);
     cham.titulo[sizeof(cham.titulo)-1] = '\0'; // garante terminação
 
-    strncpy(cham.descricao, descricaoChamada, sizeof(cham.descricao)-1);
+    strncpy(cham.descricao, descricao, sizeof(cham.descricao)-1);
     cham.descricao[sizeof(cham.descricao)-1] = '\0';
 
     strncpy(cham.criador, user, sizeof(cham.criador)-1);
@@ -167,63 +231,29 @@ static void menuCriarChamadoHandler(int prioridadeParametro, int comPreferencia,
     cham.tempoComplexo = t;
     
     if(comPreferencia == 1){
-        popPilha(dados.pil);
-        popPilha(dados.pil);
+        popPilha(estruturasGlobais.pil);
+        popPilha(estruturasGlobais.pil);
         // realizo o pop duas vezes, para voltar direto para o menu principal
         // adiciona na fila de prioridade
 
         //adiciona na fila de prioridade
-        filaPrioridade* f = dados.filaPrioridade;
+        filaPrioridade* f = estruturasGlobais.filaPrioridade;
         cham.prioridade = prioridade;
         filaPrioridadeInserir(f, cham);
     }else{
-        fila* f = dados.filaNormal;
+        fila* f = estruturasGlobais.filaNormal;
         cham.prioridade = 0;
         filaInserir(f, cham);
-        popPilha(dados.pil);
-        popPilha(dados.pil);
+        popPilha(estruturasGlobais.pil);
+        popPilha(estruturasGlobais.pil);
         // realizo o pop duas vezes, para voltar direto para o menu principal
         // adiciona na fila normal
         // tira o esse menu da pilha
     }
 }
 
-// visualizar chamados
-static void menuEditHandlerChamados(int opcao, Estruturas dados, char* user){
-    // menu tipo 5
-    // opcao 1 = Atender proximo chamado
-    // opcao 2 = Concluir chamado em andamento
-    // opcao 3 = Deletar chamado fechado
-
-}
-
-// funcao para menu usuarios
-static void menuEditHandlerUsuarios(int userAdm, Estruturas dados, char* user){
-    // se e adm ou nao (0 ou 1)
-}
-
-static void funcaoMainExtra(int type, int opcao, Estruturas dados, char* user){
-    switch(type){
-        case 3:
-            // criar chamado
-            menuCriarChamadoHandler(0, opcao, dados, user);
-            break;
-        case 5:
-            // editar chamados
-            break;
-        case 7:
-            // editar usuarios
-            break;
-    }
-}
-
-
-// --------------------------------
-// FUNCOES DE CONTEUDO EXTRA
-// --------------------------------
-
 // funcao para formatar testo da descricao em varias linhas
-static void quebrarDescricao(const char *texto, char destino[7][50]) {
+static int quebrarDescricao(const char *texto, char destino[7][50]) {
     int linha = 0;
     const char *p = texto;
 
@@ -259,23 +289,49 @@ static void quebrarDescricao(const char *texto, char destino[7][50]) {
         // pula espaço inicial da próxima linha, se houver
         if (*p == ' ') p++;
     }
-
+    int rLinha = linha;
+    
     // Garante que as linhas restantes fiquem vazias
     for (; linha < 7; linha++)
         destino[linha][0] = '\0';
+    return rLinha;
 }
 
+static chamado* vetorOrdenadoFilaPrioridade(filaPrioridade* fp) {
+    filaPrioridade* fpCopia = filaPrioridadeCopiar(fp);
+    // para conseguir pegar o topo sempre e colocar em um vetor
+    chamado* vetor = NULL;
+    if(fp->n > 0){
+        vetor = (chamado*)malloc(fp->n * sizeof(chamado));
+    }
+    // colocar em ordem no vetor
+    for(int i = 0; i < fp->n; i++){
+        vetor[i] = filaPrioridadeRemover(fpCopia);
+    }
+    filaPrioridadeLiberar(&fpCopia);
+    return vetor;
+}
 
-// funcao auxiliar para mostrar os chamados em baixo do menu de visualizar chamados
-static void mostrarChamados(Estruturas dados) {
-    fila *f = dados.filaNormal;
-    filaPrioridade *fp = dados.filaPrioridade;
-    filaDupla *fd = dados.filadupla;
-    fila *fAndamento = dados.filaAndamento;
+/// @brief Carrega os buffers de chamados para exibição
+/// @param buf1 buffer de chamados abertos
+/// @param buf2 buffer de chamados em andamento
+/// @param buf3 buffer de chamados fechados
+/// @param linhasAberto número de linhas no buffer de chamados abertos
+/// @param linhasAndamento número de linhas no buffer de chamados em andamento
+/// @param linhasFechado número de linhas no buffer de chamados fechados
+/// @param divisaoLinhas matriz de divisao de linhas por pagina de cada buffer
+/// @param totalPaginas número total de páginas necessárias para exibição
+static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int* linhasAberto, int* linhasAndamento, int* linhasFechado, int*** divisaoLinhas, int* totalPaginas) {
+    fila *f = estruturasGlobais.filaNormal;
+    filaPrioridade *fp = estruturasGlobais.filaPrioridade;
+    filaDupla *fd = estruturasGlobais.filadupla;
+    fila *fAndamento = estruturasGlobais.filaAndamento;
 
     noFila *atualFilaAberto = f ? f->first : NULL;
     noDuplo *atualFilaFechado = fd ? fd->inicio : NULL;
     noFila *atualFilaAndamento = fAndamento ? fAndamento->first : NULL;
+
+   chamado* vetPrioridadeTemp = vetorOrdenadoFilaPrioridade(fp);
 
     int fQuant = f ? f->n : 0;
     int fdQuant = fd ? fd->n : 0;
@@ -283,30 +339,98 @@ static void mostrarChamados(Estruturas dados) {
     int fpQuant = fp ? fp->n : 0;
 
     int fUsed = 0, fdUsed = 0, fAndamentoUsed = 0, fpUsed = 0;
-    printf(GREEN" +--------------------------------------------------+     "YELLOW"+--------------------------------------------------+     "RED"+--------------------------------------------------+\n"RESET);
-    printf(GREEN" |                     ABERTO                       |     "YELLOW"|                   EM ANDAMENTO                   |     "RED"|                      FECHADO                     |\n"RESET);
-    printf(GREEN" +--------------------------------------------------+     "YELLOW"+--------------------------------------------------+     "RED"+--------------------------------------------------+\n"RESET);
 
+    // =============================================
+    // CONTAGEM PRECISA DE LINHAS POR CHAMADO
+    // =============================================
 
-    // calcular número de linhas
-    int linhasAberto = (fQuant + fpQuant) * 14;
-    int linhasAndamento = fAndamentoQuant * 14;
-    int linhasFechado = fdQuant * 14;
+    // Buffers auxiliares para contagem de linhas por chamado
+    int *linhasPorChamadoAberto = malloc((fQuant + fpQuant) * sizeof(int));
+    int *linhasPorChamadoAndamento = malloc(fAndamentoQuant * sizeof(int));
+    int *linhasPorChamadoFechado = malloc(fdQuant * sizeof(int));
 
-    // inicializar ponteiros como NULL
-    char **matrizAberto = NULL;
-    char **matrizAndamento = NULL;
-    char **matrizFechado = NULL;
+    // contador geral
+    int totalLinhasAberto = 0, totalLinhasAndamento = 0, totalLinhasFechado = 0;
 
+    // ----------- Abertos (fila normal + prioridade) -----------
+    {
+        int index = 0;
+        // fila de prioridade (vetor)
+        if (fp && fp->elementos) {
+            for (int i = 0; i < fp->n; i++) {
+                char tempDestino[7][50];
+                int linhasDescricao = quebrarDescricao(vetPrioridadeTemp[i].descricao, tempDestino);
+                int linhasTotais = linhasDescricao + 6;
+
+                linhasPorChamadoAberto[index++] = linhasTotais;
+                totalLinhasAberto += linhasTotais;
+            }
+        }
+
+        // fila normal
+        noFila *atual = f ? f->first : NULL;
+        while (atual) {
+            char tempDestino[7][50];
+            int linhasDescricao = quebrarDescricao(atual->chamado.descricao, tempDestino);
+            int linhasTotais = linhasDescricao + 6;
+
+            linhasPorChamadoAberto[index++] = linhasTotais;
+            totalLinhasAberto += linhasTotais;
+
+            atual = atual->prox;
+        }
+
+    }
+    
+    // ----------- Andamento -----------
+    {
+        int index = 0;
+        noFila *atual = fAndamento ? fAndamento->first : NULL;
+        while (atual) {
+            char tempDestino[7][50];
+            int linhasDescricao = quebrarDescricao(atual->chamado.descricao, tempDestino);
+            int linhasTotais = linhasDescricao + 6;
+
+            linhasPorChamadoAndamento[index++] = linhasTotais;
+            totalLinhasAndamento += linhasTotais;
+
+            atual = atual->prox;
+        }
+    }
+
+    // ----------- Fechados -----------
+    {
+        int index = 0;
+        noDuplo *atual = fd ? fd->inicio : NULL;
+        while (atual) {
+            char tempDestino[7][50];
+            int linhasDescricao = quebrarDescricao(atual->chamado.descricao, tempDestino);
+            int linhasTotais = linhasDescricao + 2;
+
+            linhasPorChamadoFechado[index++] = linhasTotais;
+            totalLinhasFechado += linhasTotais;
+
+            atual = atual->prox;
+        }
+    }
+
+    // define as quantidades totais de linhas com base real
+    *linhasAberto = totalLinhasAberto;
+    *linhasAndamento = totalLinhasAndamento;
+    *linhasFechado = totalLinhasFechado;
+
+    *buf1 = NULL;
+    *buf2 = NULL;
+    *buf3 = NULL;
     // alocar matrizAberto se tiver linhas
-    if (linhasAberto > 0) {
-        matrizAberto = calloc(linhasAberto, sizeof(char*));
-        if (!matrizAberto) { // logs
+    if (*linhasAberto > 0) {
+        *buf1 = calloc(*linhasAberto, sizeof(char*));
+        if (!(*buf1)) { // logs
             perror("calloc matrizAberto"); exit(1); 
         }
-        for (int i = 0; i < linhasAberto; i++) {
-            matrizAberto[i] = calloc(52, sizeof(char)); // 51 + '\0'
-            if (!matrizAberto[i]) { 
+        for (int i = 0; i < *linhasAberto; i++) {
+            (*buf1)[i] = calloc(52, sizeof(char)); // 51 + '\0'
+            if (!(*buf1)[i]) { 
                 // logs
                 perror("calloc matrizAberto[i]"); exit(1); 
             }
@@ -314,15 +438,15 @@ static void mostrarChamados(Estruturas dados) {
     }
 
     // alocar matrizAndamento se tiver linhas
-    if (linhasAndamento > 0) {
-        matrizAndamento = calloc(linhasAndamento, sizeof(char*));
-        if (!matrizAndamento) { 
+    if (*linhasAndamento > 0) {
+        *buf2 = calloc(*linhasAndamento, sizeof(char*));
+        if (!*buf2) { 
             // logs
             perror("calloc matrizAndamento"); exit(1); 
         }
-        for (int i = 0; i < linhasAndamento; i++) {
-            matrizAndamento[i] = calloc(52, sizeof(char));
-            if (!matrizAndamento[i]) { 
+        for (int i = 0; i < *linhasAndamento; i++) {
+            (*buf2)[i] = calloc(52, sizeof(char));
+            if (!(*buf2)[i]) { 
                 // logs
                 perror("calloc matrizAndamento[i]"); exit(1); 
             }
@@ -330,15 +454,19 @@ static void mostrarChamados(Estruturas dados) {
     }
 
     // alocar matrizFechado se tiver linhas
-    if (linhasFechado > 0) {
-        matrizFechado = calloc(linhasFechado, sizeof(char*));
-        if (!matrizFechado) { perror("calloc matrizFechado"); exit(1); }
-        for (int i = 0; i < linhasFechado; i++) {
-            matrizFechado[i] = calloc(52, sizeof(char));
-            if (!matrizFechado[i]) { perror("calloc matrizFechado[i]"); exit(1); }
+    if (*linhasFechado > 0) {
+        *buf3 = calloc(*linhasFechado, sizeof(char*));
+        if (!*buf3) { perror("calloc matrizFechado"); exit(1); }
+        for (int i = 0; i < *linhasFechado; i++) {
+            (*buf3)[i] = calloc(52, sizeof(char));
+            if (!(*buf3)[i]) { perror("calloc matrizFechado[i]"); exit(1); }
         }
     }
-
+    
+    
+    char **matrizAberto = *buf1;
+    char **matrizAndamento = *buf2;
+    char **matrizFechado = *buf3;
 
     int linhaAtualAberto = 0;
     int linhaAtualAndamento = 0;
@@ -351,23 +479,22 @@ static void mostrarChamados(Estruturas dados) {
     // 5 - descricao
     // 6 - separador
     while(fUsed < fQuant || fdUsed < fdQuant || fAndamentoUsed < fAndamentoQuant || fpUsed < fpQuant) {
-
         // ========================================================
         // (TÍTULO)
         // ========================================================
-        if(linhasAberto > 0){
+        if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
             matrizAberto[linhaAtualAberto][0] = '\0';
         }
-        if(linhasAndamento > 0){
+        if (*linhasAndamento > 0 && linhaAtualAndamento < *linhasAndamento) {
             matrizAndamento[linhaAtualAndamento][0] = '\0';
         }
-        if(linhasFechado > 0){
+        if (*linhasFechado > 0 && linhaAtualFechado < *linhasFechado) {
             matrizFechado[linhaAtualFechado][0] = '\0';
         }
 
         if (fpUsed < fpQuant) {
             matrizAberto[linhaAtualAberto][0] = '1'; // marca como titulo
-            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s", fp->elementos[fpUsed].titulo);
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s", vetPrioridadeTemp[fpUsed].titulo);
             linhaAtualAberto++;
         } else if (fUsed < fQuant && atualFilaAberto) {
             matrizAberto[linhaAtualAberto][0] = '1'; // marca como titulo
@@ -379,29 +506,30 @@ static void mostrarChamados(Estruturas dados) {
             snprintf(matrizAndamento[linhaAtualAndamento] + 1, TAM_LINHA - 1, "%s", atualFilaAndamento->chamado.titulo);
             linhaAtualAndamento++;
         }
-
+        
+        fflush(stdout);
         if (fdUsed < fdQuant && atualFilaFechado) {
             matrizFechado[linhaAtualFechado][0] = '1'; // marca como titulo
             snprintf(matrizFechado[linhaAtualFechado] + 1, TAM_LINHA - 1, "%s", atualFilaFechado->chamado.titulo);
             linhaAtualFechado++;
         }
-
+        
         // ========================================================
         // Linha 2: PRIORIDADE
         // ========================================================
-        if(linhasAberto > 0){
+        if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
             matrizAberto[linhaAtualAberto][0] = '\0';
         }
-        if(linhasAndamento > 0){
+        if (*linhasAndamento > 0 && linhaAtualAndamento < *linhasAndamento) {
             matrizAndamento[linhaAtualAndamento][0] = '\0';
         }
-        if(linhasFechado > 0){
+        if (*linhasFechado > 0 && linhaAtualFechado < *linhasFechado) {
             matrizFechado[linhaAtualFechado][0] = '\0';
         }
 
         if (fpUsed < fpQuant) {
             matrizAberto[linhaAtualAberto][0] = '2'; // marca como prioridade
-            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%d", fp->elementos[fpUsed].prioridade);
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%d", vetPrioridadeTemp[fpUsed].prioridade);
             linhaAtualAberto++;
         } else if (fUsed < fQuant && atualFilaAberto) {
             matrizAberto[linhaAtualAberto][0] = '2'; // marca como prioridade
@@ -424,19 +552,19 @@ static void mostrarChamados(Estruturas dados) {
         // ========================================================
         // Linha 3: CRIADOR
         // ========================================================
-        if(linhasAberto > 0){
+        if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
             matrizAberto[linhaAtualAberto][0] = '\0';
         }
-        if(linhasAndamento > 0){
+        if (*linhasAndamento > 0 && linhaAtualAndamento < *linhasAndamento) {
             matrizAndamento[linhaAtualAndamento][0] = '\0';
         }
-        if(linhasFechado > 0){
+        if (*linhasFechado > 0 && linhaAtualFechado < *linhasFechado) {
             matrizFechado[linhaAtualFechado][0] = '\0';
         }
 
         if (fpUsed < fpQuant) {
             matrizAberto[linhaAtualAberto][0] = '3'; // marca como criador
-            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s", fp->elementos[fpUsed].criador);
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s", vetPrioridadeTemp[fpUsed].criador);
             linhaAtualAberto++;
         } else if (fUsed < fQuant && atualFilaAberto) {
             matrizAberto[linhaAtualAberto][0] = '3'; // marca como criador
@@ -459,25 +587,25 @@ static void mostrarChamados(Estruturas dados) {
         // ========================================================
         // Linha 4: DATA E HORA
         // ========================================================
-        if(linhasAberto > 0){
+        if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
             matrizAberto[linhaAtualAberto][0] = '\0';
         }
-        if(linhasAndamento > 0){
+        if (*linhasAndamento > 0 && linhaAtualAndamento < *linhasAndamento) {
             matrizAndamento[linhaAtualAndamento][0] = '\0';
         }
-        if(linhasFechado > 0){
+        if (*linhasFechado > 0 && linhaAtualFechado < *linhasFechado) {
             matrizFechado[linhaAtualFechado][0] = '\0';
         }
 
         if (fpUsed < fpQuant){
             matrizAberto[linhaAtualAberto][0] = '4'; // marca como data e hora
             snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%02d/%02d/%04d %02d:%02d:%02d",
-                    fp->elementos[fpUsed].tempoComplexo.dia,
-                    fp->elementos[fpUsed].tempoComplexo.mes,
-                    fp->elementos[fpUsed].tempoComplexo.ano,
-                    fp->elementos[fpUsed].tempoComplexo.horas,
-                    fp->elementos[fpUsed].tempoComplexo.minutos,
-                    fp->elementos[fpUsed].tempoComplexo.segundos);
+                    vetPrioridadeTemp[fpUsed].tempoComplexo.dia,
+                    vetPrioridadeTemp[fpUsed].tempoComplexo.mes,
+                    vetPrioridadeTemp[fpUsed].tempoComplexo.ano,
+                    vetPrioridadeTemp[fpUsed].tempoComplexo.horas,
+                    vetPrioridadeTemp[fpUsed].tempoComplexo.minutos,
+                    vetPrioridadeTemp[fpUsed].tempoComplexo.segundos);
             linhaAtualAberto++;
         }
         else if (fUsed < fQuant && atualFilaAberto) {
@@ -514,15 +642,15 @@ static void mostrarChamados(Estruturas dados) {
                     atualFilaFechado->chamado.tempoComplexo.segundos);
             linhaAtualFechado++;
         }
-
+        
         // =============== LINHA VAZIA ==========================================
-        if(linhasAberto > 0){
+        if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
             matrizAberto[linhaAtualAberto][0] = '\0';
         }
-        if(linhasAndamento > 0){
+        if (*linhasAndamento > 0 && linhaAtualAndamento < *linhasAndamento) {
             matrizAndamento[linhaAtualAndamento][0] = '\0';
         }
-        if(linhasFechado > 0){
+        if (*linhasFechado > 0 && linhaAtualFechado < *linhasFechado) {
             matrizFechado[linhaAtualFechado][0] = '\0';
         }
 
@@ -544,13 +672,13 @@ static void mostrarChamados(Estruturas dados) {
         // Linha 5+: DESCRIÇÃO (7 linhas max)
         // ========================================================
 
-        if(linhasAberto > 0){
+        if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
             matrizAberto[linhaAtualAberto][0] = '\0';
         }
-        if(linhasAndamento > 0){
+        if (*linhasAndamento > 0 && linhaAtualAndamento < *linhasAndamento) {
             matrizAndamento[linhaAtualAndamento][0] = '\0';
         }
-        if(linhasFechado > 0){
+        if (*linhasFechado > 0 && linhaAtualFechado < *linhasFechado) {
             matrizFechado[linhaAtualFechado][0] = '\0';
         }
 
@@ -561,7 +689,7 @@ static void mostrarChamados(Estruturas dados) {
         // fila de prioridade
         if (fpUsed < fpQuant) {
             // formatar string descricao (para nao ficar palavras cortadas na hora de printar)
-            quebrarDescricao(fp->elementos[fpUsed].descricao, desc1);
+            quebrarDescricao(vetPrioridadeTemp[fpUsed].descricao, desc1);
             // guardar a descricao na matriz
             int linha = 0;
             while(desc1[linha][0] != '\0' && linha < 7) {
@@ -635,60 +763,281 @@ static void mostrarChamados(Estruturas dados) {
             atualFilaFechado = atualFilaFechado->prox;
             fdUsed++;
         }
-        // fim do loop while para guardar as informacoes nas matrizes
+    }
+    // ===================== CÁLCULO DE PÁGINAS =====================
+    
+    // cada tipo começa com 1 página
+    int paginasAberto = 1, paginasAndamento = 1, paginasFechado = 1;
+    int linhasNaPagina = 0;
+
+    // ------------------ ABERTO ------------------
+    linhasNaPagina = 0;
+    for (int i = 0; i < fQuant + fpQuant; i++) {
+        int limite = (paginasAberto == 1) ? 27 : 40;
+        linhasNaPagina += linhasPorChamadoAberto[i];
+        if (linhasNaPagina > limite) {
+            paginasAberto++;
+            linhasNaPagina = linhasPorChamadoAberto[i];
+        }
     }
 
-    fflush(stdout);
-    // ========================================================
-    // imprimir as matrizes lado a lado
-    // ========================================================
-    int maxLinhas = linhaAtualAberto;
-    if (linhaAtualAndamento > maxLinhas) maxLinhas = linhaAtualAndamento;
-    if (linhaAtualFechado > maxLinhas) maxLinhas = linhaAtualFechado;
+    // ------------------ ANDAMENTO ------------------
+    linhasNaPagina = 0;
+    for (int i = 0; i < fAndamentoQuant; i++) {
+        int limite = (paginasAndamento == 1) ? 27 : 40;
+        linhasNaPagina += linhasPorChamadoAndamento[i];
+        if (linhasNaPagina > limite) {
+            paginasAndamento++;
+            linhasNaPagina = linhasPorChamadoAndamento[i];
+        }
+    }
 
-    int indiceAtual = 0;
-    while (maxLinhas > 0) {
+    // ------------------ FECHADO ------------------
+    linhasNaPagina = 0;
+    for (int i = 0; i < fdQuant; i++) {
+        int limite = (paginasFechado == 1) ? 27 : 40;
+        linhasNaPagina += linhasPorChamadoFechado[i];
+        if (linhasNaPagina > limite) {
+            paginasFechado++;
+            linhasNaPagina = linhasPorChamadoFechado[i];
+        }
+    }
+
+    // número total de páginas é o máximo entre os 3
+    *totalPaginas = paginasAberto;
+    if (paginasAndamento > *totalPaginas) *totalPaginas = paginasAndamento;
+    if (paginasFechado > *totalPaginas) *totalPaginas = paginasFechado;
+
+    // ===================== ALOCAÇÃO DAS DIVISÕES =====================
+    *divisaoLinhas = malloc(3 * sizeof(int*));
+    for (int i = 0; i < 3; i++) {
+        (*divisaoLinhas)[i] = calloc((*totalPaginas + 1), sizeof(int));
+    }
+
+    // ===================== PREENCHER DIVISÃO DE LINHAS =====================
+    
+    // ---------- ABERTO ----------
+    linhasNaPagina = 0;
+    paginasAberto = 1;
+    int linhasAbsolutas = 0;
+    (*divisaoLinhas)[0][0] = 0;
+    for (int i = 0; i < (fQuant + fpQuant); i++) {
+        int limite = (paginasAberto == 1) ? 27 : 40;
+        linhasNaPagina += linhasPorChamadoAberto[i];
+        linhasAbsolutas += linhasPorChamadoAberto[i];
+        if (linhasNaPagina > limite && paginasAberto <= *totalPaginas) {
+            (*divisaoLinhas)[0][paginasAberto] = linhasAbsolutas - linhasPorChamadoAberto[i];
+            paginasAberto++;
+            linhasNaPagina = linhasPorChamadoAberto[i];
+        }
+    }
+
+    // ---------- ANDAMENTO ----------
+    linhasNaPagina = 0;
+    paginasAndamento = 1;
+    linhasAbsolutas = 0;
+    (*divisaoLinhas)[1][0] = 0;
+    for (int i = 0; i < fAndamentoQuant; i++) {
+        int limite = (paginasAndamento == 1) ? 27 : 40;
+        linhasNaPagina += linhasPorChamadoAndamento[i];
+        linhasAbsolutas += linhasPorChamadoAndamento[i];
+        if (linhasNaPagina > limite && paginasAndamento <= *totalPaginas) {
+            (*divisaoLinhas)[1][paginasAndamento] = linhasAbsolutas - linhasPorChamadoAndamento[i];
+            paginasAndamento++;
+            linhasNaPagina = linhasPorChamadoAndamento[i];
+        }
+    }
+
+    // ---------- FECHADO ----------
+    linhasNaPagina = 0;
+    paginasFechado = 1;
+    linhasAbsolutas = 0;
+    (*divisaoLinhas)[2][0] = 0;
+    for (int i = 0; i < fdQuant; i++) {
+        int limite = (paginasFechado == 1) ? 27 : 40;
+        linhasNaPagina += linhasPorChamadoFechado[i];
+        linhasAbsolutas += linhasPorChamadoFechado[i];
+        if (linhasNaPagina > limite && paginasFechado <= *totalPaginas) {
+            (*divisaoLinhas)[2][paginasFechado] = linhasAbsolutas - linhasPorChamadoFechado[i];
+            paginasFechado++;
+            linhasNaPagina = linhasPorChamadoFechado[i];
+        }
+    }
+
+    // ---------- COMPLETAR PÁGINAS VAZIAS ----------
+    for (int i = paginasAberto; i <= *totalPaginas; i++)
+        (*divisaoLinhas)[0][i] = *linhasAberto;
+
+    for (int i = paginasAndamento; i <= *totalPaginas; i++)
+        (*divisaoLinhas)[1][i] = *linhasAndamento;
+
+    for (int i = paginasFechado; i <= *totalPaginas; i++)
+        (*divisaoLinhas)[2][i] = *linhasFechado;
+
+    
+
+    // ===================== LIBERAR VETORES TEMPORÁRIOS =====================
+    free(linhasPorChamadoAberto);
+    free(linhasPorChamadoAndamento);
+    free(linhasPorChamadoFechado);
+    free(vetPrioridadeTemp);
+}
+
+
+/// @brief printar o buffer de chamados na tela, de acordo com a pagina atual
+/// @param buf1 buffer de chamados abertos
+/// @param buf2 buffer de chamados em andamento
+/// @param buf3 buffer de chamados fechados
+/// @param linhas1 quantas linhas tem o buffer 1
+/// @param linhas2 quantas linhas tem o buffer 2
+/// @param linhas3 quantas linhas tem o buffer 3
+/// @param paginaAtual qual a pagina atual
+/// @param totalPaginas qual o total de paginas
+/// @param selected qual a opcao selecionada
+static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2, char **buf3, int linhas1, int linhas2, int linhas3, int paginaAtual, int totalPaginas, int selected){
+    int maxLinhasBuffers = linhas1;
+    if(linhas2 > maxLinhasBuffers) maxLinhasBuffers = linhas2;
+    if(linhas3 > maxLinhasBuffers) maxLinhasBuffers = linhas3;
+
+    int totalLinhas = maxLinhasBuffers + 13;
+
+    if(paginaAtual == 1){
+        // primeira pagina tem 13 linhas a menos (header)
+        char* titulo = "Visualizar Chamados";
+        repetirChar(15, '-', BLUE);
+        printf(BLUE"%s"RESET, titulo);
+        repetirChar(15, '-', BLUE);
+        printf("\n\n");
+
+        /*
+        * Atender proximo chamado - 1
+        * Concluir chamado em andamento - 2
+        * Deletar chamado fechado - 3
+        * Voltar - 4
+        * Sair - 5
+        * Pagina X de Y - 6 (ULTIMA LINHA)
+        */
+
+        char* corTextoNormal = BLUE;
+        char* corTextoSair = RED;
+        char* fundoSelecaoNormal = BG_BLUE;
+        char* fundoSelecaoSair = BG_RED;
+
+        // printar opcoes
+        char* opcoes[5] = {
+            "Atender proximo chamado",
+            "Concluir chamado em andamento",
+            "Deletar chamado fechado",
+            "Voltar",
+            "Sair"
+        };
+        for(int i = 1; i <= 5; i++){
+            if(i == selected){
+                if(i == 5){
+                    // sair
+                    printf(" %s%s\n"RESET, fundoSelecaoSair, opcoes[i-1]);
+                } else {
+                    printf(" %s%s\n"RESET, fundoSelecaoNormal, opcoes[i-1]);
+                }
+            } else {
+                if(i == 5){
+                    // sair
+                    printf(" %s%s\n"RESET, corTextoSair, opcoes[i-1]);
+                } else {
+                    printf(" %s%s\n"RESET, corTextoNormal, opcoes[i-1]);
+                }
+            }
+        }
+        printf("\n");
+        int tamanhoStr = strlen(titulo);
+        repetirChar(30+tamanhoStr, '-', BLUE);
+        printf("\n\n");
+        // header
+        printf(GREEN" +--------------------------------------------------+     "YELLOW"+--------------------------------------------------+     "RED"+--------------------------------------------------+\n"RESET);
+        printf(GREEN" |                     ABERTO                       |     "YELLOW"|                   EM ANDAMENTO                   |     "RED"|                      FECHADO                     |\n"RESET);
+        printf(GREEN" +--------------------------------------------------+     "YELLOW"+--------------------------------------------------+     "RED"+--------------------------------------------------+\n"RESET);
+    }
+
+    // ==========================================================
+    // imprimir linhas do buffer dos chamados
+    // ==========================================================
+
+    
+    int inicioLinhaAberto = divisaoLinhas[0][paginaAtual - 1];
+    int fimLinhaAberto = divisaoLinhas[0][paginaAtual];
+
+    int inicioLinhaAndamento = divisaoLinhas[1][paginaAtual - 1];
+    int fimLinhaAndamento = divisaoLinhas[1][paginaAtual];
+
+    int inicioLinhaFechado = divisaoLinhas[2][paginaAtual - 1];
+    int fimLinhaFechado = divisaoLinhas[2][paginaAtual];
+
+    
+    int fimLoop = (paginaAtual == 1) ? 40 - 13 : 40; // primeira pagina tem 13 linhas a menos (header)
+    for(int i = 0; i < fimLoop; i++){
+
         // imprimir linha
-        char firstCharAberto = ((indiceAtual < linhasAberto) ? matrizAberto[indiceAtual][0] : ' ');
-        char firstCharAndamento = ((indiceAtual < linhasAndamento) ? matrizAndamento[indiceAtual][0] : ' ');
-        char firstCharFechado = ((indiceAtual < linhasFechado) ? matrizFechado[indiceAtual][0] : ' ');
+        char firstCharAberto;
+        char firstCharAndamento;
+        char firstCharFechado;
 
+        int i1 = i + inicioLinhaAberto;
+        int i2 = i + inicioLinhaAndamento;
+        int i3 = i + inicioLinhaFechado;
+
+        if(i1 >= fimLinhaAberto || i1 >= linhas1){
+            firstCharAberto = ' ';
+        } else {
+            firstCharAberto = buf1[i1][0];
+        }
+
+        if(i2 >= fimLinhaAndamento || i2 >= linhas2){
+            firstCharAndamento = ' ';
+        } else {
+            firstCharAndamento = buf2[i2][0];
+        }
+
+        if(i3 >= fimLinhaFechado || i3 >= linhas3){
+            firstCharFechado = ' ';
+        } else {
+            firstCharFechado = buf3[i3][0];
+        }
         // ---------------------------------------------------------
-        switch (firstCharAberto)
-        {
-        case '0':
-            // linha vazia
-            printf(GREEN"| %-50s |"RESET, "");
-            break;
-        case '1':
-            // titulo
-            printf("%s| %s%-50s %s|"RESET, GREEN, BLUE, matrizAberto[indiceAtual] + 1, GREEN);
-            break;
+        
+        switch (firstCharAberto){
+            case '0':
+                // linha vazia
+                printf(GREEN"| %-50s |"RESET, "");
+                break;
+            case '1':
+                // titulo
+                printf("%s| %s%-50s %s|"RESET, GREEN, BLUE, buf1[i1] + 1, GREEN);
+                break;
 
-        case '2':
-            // prioridade
-            printf("%s| %sPrioridade: %s%-38s %s|"RESET, GREEN, MAGENTA, WHITE, matrizAberto[indiceAtual] + 1, GREEN);
-            break;
-        case '3':
-            // criador
-            printf("%s| %sCriador: %s%-41s %s|"RESET, GREEN, MAGENTA, WHITE, matrizAberto[indiceAtual] + 1, GREEN);
-            break;
-        case '4':
-            // data e hora
-            printf("%s| %sData e Hora: %s%-37s %s|"RESET, GREEN, MAGENTA, WHITE, matrizAberto[indiceAtual] + 1, GREEN);
-            break;
-        case '5':
-            // descricao
-            printf("%s| %s%-50s %s|"RESET, GREEN, CYAN, matrizAberto[indiceAtual] + 1, GREEN);
-            break;
-        case '6':
-            // separador
-            printf(GREEN" +--------------------------------------------------+"RESET);
-            break;
-        default:
-            // linha vazia
-            printf("%-54s", "");
-            break;
+            case '2':
+                // prioridade
+                printf("%s| %sPrioridade: %s%-38s %s|"RESET, GREEN, MAGENTA, WHITE, buf1[i1] + 1, GREEN);
+                break;
+            case '3':
+                // criador
+                printf("%s| %sCriador: %s%-41s %s|"RESET, GREEN, MAGENTA, WHITE, buf1[i1] + 1, GREEN);
+                break;
+            case '4':
+                // data e hora
+                printf("%s| %sData e Hora: %s%-37s %s|"RESET, GREEN, MAGENTA, WHITE, buf1[i1] + 1, GREEN);
+                break;
+            case '5':
+                // descricao
+                printf("%s| %s%-50s %s|"RESET, GREEN, CYAN, buf1[i1] + 1, GREEN);
+                break;
+            case '6':
+                // separador
+                printf(GREEN" +--------------------------------------------------+ "RESET);
+                break;
+            default:
+                // linha vazia
+                printf("%-54s", "");
+                break;
         }
         printf("   ");
 
@@ -701,28 +1050,28 @@ static void mostrarChamados(Estruturas dados) {
             break;
         case '1':
             // titulo
-            printf("%s| %s%-50s %s|"RESET, YELLOW, BLUE, matrizAndamento[indiceAtual] + 1, YELLOW);
+            printf("%s| %s%-50s %s|"RESET, YELLOW, BLUE, buf2[i2] + 1, YELLOW);
             break;
 
         case '2':
             // prioridade
-            printf("%s| %sPrioridade: %s%-38s %s|"RESET, YELLOW, MAGENTA, WHITE, matrizAndamento[indiceAtual] + 1, YELLOW);
+            printf("%s| %sPrioridade: %s%-38s %s|"RESET, YELLOW, MAGENTA, WHITE, buf2[i2] + 1, YELLOW);
             break;
         case '3':
             // criador
-            printf("%s| %sCriador: %s%-41s %s|"RESET, YELLOW, MAGENTA, WHITE, matrizAndamento[indiceAtual] + 1, YELLOW);
+            printf("%s| %sCriador: %s%-41s %s|"RESET, YELLOW, MAGENTA, WHITE, buf2[i2] + 1, YELLOW);
             break;
         case '4':
             // data e hora
-            printf("%s| %sData e Hora: %s%-37s %s|"RESET, YELLOW, MAGENTA, WHITE, matrizAndamento[indiceAtual] + 1, YELLOW);
+            printf("%s| %sData e Hora: %s%-37s %s|"RESET, YELLOW, MAGENTA, WHITE, buf2[i2] + 1, YELLOW);
             break;
         case '5':
             // descricao
-            printf("%s| %s%-50s %s|"RESET, YELLOW, CYAN, matrizAndamento[indiceAtual] + 1, YELLOW);
+            printf("%s| %s%-50s %s|"RESET, YELLOW, CYAN, buf2[i2] + 1, YELLOW);
             break;
         case '6':
             // separador
-            printf(YELLOW" +--------------------------------------------------+"RESET);
+            printf(YELLOW" +--------------------------------------------------+ "RESET);
             break;
         default:
             // linha vazia
@@ -740,24 +1089,24 @@ static void mostrarChamados(Estruturas dados) {
             break;
         case '1':
             // titulo
-            printf("%s| %s%-50s %s|"RESET, RED, BLUE, matrizFechado[indiceAtual] + 1, RED);
+            printf("%s| %s%-50s %s|"RESET, RED, BLUE, buf3[i3] + 1, RED);
             break;
 
         case '2':
             // prioridade
-            printf("%s| %sPrioridade: %s%-38s %s|"RESET, RED, MAGENTA, WHITE, matrizFechado[indiceAtual] + 1, RED);
+            printf("%s| %sPrioridade: %s%-38s %s|"RESET, RED, MAGENTA, WHITE, buf3[i3] + 1, RED);
             break;
         case '3':
             // criador
-            printf("%s| %sCriador: %s%-41s %s|"RESET, RED, MAGENTA, WHITE, matrizFechado[indiceAtual] + 1, RED);
+            printf("%s| %sCriador: %s%-41s %s|"RESET, RED, MAGENTA, WHITE, buf3[i3] + 1, RED);
             break;
         case '4':
             // data e hora
-            printf("%s| %sData e Hora: %s%-37s %s|"RESET, RED, MAGENTA, WHITE, matrizFechado[indiceAtual] + 1, RED);
+            printf("%s| %sData e Hora: %s%-37s %s|"RESET, RED, MAGENTA, WHITE, buf3[i3] + 1, RED);
             break;
         case '5':
             // descricao
-            printf("%s| %s%-50s %s|"RESET, RED, CYAN, matrizFechado[indiceAtual] + 1, RED);
+            printf("%s| %s%-50s %s|"RESET, RED, CYAN, buf3[i3] + 1, RED);
             break;
         case '6':
             // separador
@@ -770,42 +1119,649 @@ static void mostrarChamados(Estruturas dados) {
         }
         printf("\n");
         fflush(stdout);
-        indiceAtual++;
-        maxLinhas--;
     }
+    printf("\n");
+    if(selected == 6){
+        // pagina selecionada
+        printf(BG_BLUE" <- Pagina %d/%d ->"RESET, paginaAtual, totalPaginas);
+    } else {
+        printf(BLUE" <- Pagina %d/%d ->"RESET, paginaAtual, totalPaginas);
+    }
+    fflush(stdout);
+}
 
-    // liberar memoria
+// visualizar chamados
+static void menuVisualizarChamados(int opcao, char* user){
+    // menu tipo 4
+    // opcao 1 = Atender proximo chamado
+    // opcao 2 = Concluir chamado em andamento
+    // opcao 3 = Deletar chamado fechado
+
+    char* opcoes[5] = {
+            "Atender proximo chamado",
+            "Concluir chamado em andamento",
+            "Deletar chamado fechado",
+            "Voltar",
+            "Sair"
+        };
+
+    int paginaAtual = 1;
+    int selected = 1;
+    char **matrizAberto = NULL;
+    char **matrizAndamento = NULL;
+    char **matrizFechado = NULL;
+
+    int linhasAberto = 0;
+    int linhasAndamento = 0;
+    int linhasFechado = 0;
+    int totalPaginas = 0;
+
+    int** divisaoLinhas = NULL;
+    esperar_tamanho_minimo(40, 170);
+    if(terminalPequenoAlertado){
+        
+        terminalPequenoAlertado = 0;
+    }
+    clear();
+    carregarBufferChamados(&matrizAberto, &matrizAndamento, &matrizFechado, &linhasAberto, &linhasAndamento, &linhasFechado, &divisaoLinhas, &totalPaginas);
+    printarBufferChamados(divisaoLinhas, matrizAberto, matrizAndamento, matrizFechado, linhasAberto, linhasAndamento, linhasFechado, paginaAtual, totalPaginas, selected);
+
+    while(1){
+        KeyCode k = userGetKey();
+        if(k == RESIZE_EVENT){
+            esperar_tamanho_minimo(40, 170);
+            if(terminalPequenoAlertado){
+                clear();
+                printarBufferChamados(divisaoLinhas, matrizAberto, matrizAndamento, matrizFechado, linhasAberto, linhasAndamento, linhasFechado, paginaAtual, totalPaginas, selected);
+                terminalPequenoAlertado = 0;
+            }
+            continue;
+        }else if(k == KC_ESC){
+            popPilha(estruturasGlobais.pil);
+            break;
+        }
+        if(paginaAtual == 1){
+            char* corTexto1 = BLUE;
+            char* fundoTexto2 = BG_BLUE;
+           if(k == KC_DOWN){
+                if(selected < 6){  // máximo 6 opções
+                    // desmarcar opção atual
+                    updateOption(selected + 2, opcoes[selected-1], "", (selected == 5 ? RED : BLUE));
+                    selected++;
+                    // marcar opção nova
+                    if(selected == 6){
+                        // pagina
+                        char fimPaginaStr[20];
+                        snprintf(fimPaginaStr, 20, " <- Pagina %d/%d ->", paginaAtual, totalPaginas);
+                        updateOption(42, fimPaginaStr, BG_BLUE, "");
+                    } else {
+                        updateOption(selected + 2, opcoes[selected-1], (selected == 5 ? BG_RED : BG_BLUE), "");
+                    }
+                }
+            }else if(k == KC_UP){
+                if(selected > 1){
+                    // desmarcar opção atual
+                    if(selected == 6){
+                        char fimPaginaStr[20];
+                        snprintf(fimPaginaStr, 20, " <- Pagina %d/%d ->", paginaAtual, totalPaginas);
+                        updateOption(42, fimPaginaStr, "", BLUE);
+                    } else {
+                        updateOption(selected + 2, opcoes[selected-1], "", (selected == 5 ? RED : BLUE));
+                    }
+                    selected--;
+                    // marcar opção nova
+                    updateOption(selected + 2, opcoes[selected-1], (selected == 5 ? BG_RED : BG_BLUE), "");
+                }
+            
+            }else if(k == KC_RIGHT && selected == 6){
+                if(paginaAtual < totalPaginas){
+                    paginaAtual++;
+                    clear();
+                    printarBufferChamados(divisaoLinhas, matrizAberto, matrizAndamento, matrizFechado, linhasAberto, linhasAndamento, linhasFechado, paginaAtual, totalPaginas, selected);
+                }
+            }else if(k == KC_LEFT && selected == 6){
+                if(paginaAtual > 1){
+                    paginaAtual--;
+                    clear();
+                    printarBufferChamados(divisaoLinhas, matrizAberto, matrizAndamento, matrizFechado, linhasAberto, linhasAndamento, linhasFechado, paginaAtual, totalPaginas, selected);
+                }
+            }else if(k == KC_ENTER && selected < 6){
+                if(selected == 1){
+                    // atendender proximo chamado
+                    if(linhasAberto == 0){
+                        // nao ha chamados abertos
+                        menuHandler m = createMenu(12);
+                        pushPilha(estruturasGlobais.pil, m);
+                        break;
+                    } else {
+                        menuHandler m = createMenu(13);
+                        pushPilha(estruturasGlobais.pil, m);
+                        break;
+                    }
+                }else if(selected == 2){
+                    // concluir chamado em andamento
+                    if(linhasAndamento == 0){
+                        // nao ha chamados em andamento
+                        menuHandler m = createMenu(15);
+                        pushPilha(estruturasGlobais.pil, m);
+                    } else {
+                        menuHandler m = createMenu(14);
+                        pushPilha(estruturasGlobais.pil, m);
+                    }
+                    break;
+                }else if(selected == 3){
+                    // deletar chamado fechado
+                }else if(selected == 4){
+                    // voltar
+                    popPilha(estruturasGlobais.pil);
+                    break;
+                }else if(selected == 5){
+                    // sair
+                    menuHandler m = createMenu(9);
+                    pushPilha(estruturasGlobais.pil, m);
+                    break;
+                }
+            }
+        }else{
+            if(k == KC_RIGHT){
+                if(paginaAtual < totalPaginas){
+                    paginaAtual++;
+                    clear();
+                    printarBufferChamados(divisaoLinhas, matrizAberto, matrizAndamento, matrizFechado, linhasAberto, linhasAndamento, linhasFechado, paginaAtual, totalPaginas, selected);
+                }
+            }else if(k == KC_LEFT){
+                if(paginaAtual > 1){
+                    paginaAtual--;
+                    clear();
+                    printarBufferChamados(divisaoLinhas, matrizAberto, matrizAndamento, matrizFechado, linhasAberto, linhasAndamento, linhasFechado, paginaAtual, totalPaginas, selected);
+                }
+            }
+        }
+    }
+    
+     // liberar memoria
     if(linhasAberto > 0){
-        for (int i = 0; i < (fQuant+fpQuant) * 14; i++) {
+        for (int i = 0; i < linhasAberto; i++) {
             free(matrizAberto[i]);
         }
         free(matrizAberto);
     }
     if(linhasAndamento > 0){
-        for (int i = 0; i < fAndamentoQuant * 14; i++) {
+        for (int i = 0; i < linhasAndamento; i++) {
             free(matrizAndamento[i]);
         }
         free(matrizAndamento);
     }
     if(linhasFechado > 0){
-        for (int i = 0; i < fdQuant * 14; i++) {
+        for (int i = 0; i < linhasFechado; i++) {
             free(matrizFechado[i]);
         }
         free(matrizFechado);
     }
+
+    if(divisaoLinhas != NULL){
+        for(int i = 0; i < 3; i++){
+            free(divisaoLinhas[i]);
+        }
+        free(divisaoLinhas);
+    }
+}
+
+// funcao para menu usuarios
+static void menuEditHandlerUsuarios(int userAdm, char* user){
+    // se e adm ou nao (0 ou 1)
+}
+
+/// @brief carregar os dados do menu de concluir chamado em andamento
+/// @param totalPaginas total de paginas
+/// @param divisaoPaginas matriz de divisao de paginas
+/// @param divisaoLinhas matriz de divisao de linhas
+static void carregarDadosMenuConcluirChamado(int * totalPaginas, int ***divisaoPaginas, int *** divisaoLinhas){
+    *totalPaginas = 1;
+    fila* fAndamento = estruturasGlobais.filaAndamento;
+    noFila* no = fAndamento->first;
+    int count = 0;
+    int linhasAtual = 8; // primeira pagina tem header;
+    while(no != NULL){
+        chamado cham = no->chamado;
+        // descricao
+        char temp[7][50];
+        int linhasDesc = quebrarDescricao(cham.descricao, temp);
+        linhasAtual += linhasDesc + 7; // 7 linhas fixas + linhas da desc
+        if(linhasAtual > 40){
+            (*totalPaginas)++;
+            linhasAtual = linhasDesc + 7; // resetar linhasAtual para o novo chamado
+        }
+        count++;
+        no = no->prox;
+    }
+    
+    
+    // alocar divisao paginas
+    *divisaoPaginas = calloc(sizeof(int*), (*totalPaginas));
+    for(int i = 0; i < *totalPaginas; i++){
+        (*divisaoPaginas)[i] = calloc(sizeof(int), 10); // impossivel ter 10 chamados por pagina
+    }
+    // alocar divisao linhas
+    *divisaoLinhas = calloc(sizeof(int*), (*totalPaginas));
+    for(int i = 0; i < *totalPaginas; i++){
+        (*divisaoLinhas)[i] = calloc(sizeof(int), 20); // 10 * 2 maximo de limites dos chamados por pagina
+    }
+    // preencher divisao paginas e linhas
+    no = fAndamento->first;
+    int paginaAtual = 0;
+    int chamadoAtualNaPagina = 0;
+    linhasAtual = 8; // primeira pagina tem header
+    (*divisaoLinhas)[0][0] = 9; // primeira linha do primeiro chamado
+    while(no != NULL){
+        chamado cham = no->chamado;
+        // descricao
+        char temp[7][50];
+        int linhasDesc = quebrarDescricao(cham.descricao, temp);
+        linhasAtual += linhasDesc + 7; // 7 linhas fixas + linhas da desc
+        if(linhasAtual > 40){
+            // nova pagina
+            paginaAtual++;
+            linhasAtual = linhasDesc + 7; // resetar linhasAtual para o novo chamado
+            chamadoAtualNaPagina = 0;
+        }
+        
+        // preencher divisao paginas e linhas
+        (*divisaoPaginas)[paginaAtual][chamadoAtualNaPagina] = 1; // marcar que tem chamado
+        (*divisaoLinhas)[paginaAtual][chamadoAtualNaPagina + 1] = linhasAtual + 1; // marcar linha inicial do chamado
+        chamadoAtualNaPagina++;
+        no = no->prox;
+    }
+    
+}
+
+/// @brief printar o menu de concluir chamado em andamento 
+/// @param divisaoPaginas matriz de divisao de paginas
+/// @param divisaoLinhas matriz de divisao de linhas
+/// @param totalPaginas total de paginas
+/// @param paginaAtual pagina atual
+/// @param selected chamado ou opcao selecionada
+static void printarMenuConcluirChamado(int ** divisaoPaginas, int ** divisaoLinhas, int totalPaginas, int paginaAtual, int selected){
+    fila* fAndamento = estruturasGlobais.filaAndamento;
+    noFila* no = fAndamento->first;
+    int count = 0;
+    if(paginaAtual == 1){
+        // primeira pagina tem 13 linhas a menos (header)
+        char* titulo = "Concluir Chamado em Andamento";
+        repetirChar(15, '-', BLUE);
+        printf(BLUE"%s"RESET, titulo);
+        repetirChar(15, '-', BLUE);
+        printf("\n");
+        printf(GREEN" %s"RESET, "Selecione um chamado para concluir");
+        printf("\n\n");
+
+        /*
+        * Voltar - 1 
+        * Sair - 2
+        */
+
+        char* corTextoNormal = BLUE;
+        char* corTextoSair = RED;
+        char* fundoSelecaoNormal = BG_BLUE;
+        char* fundoSelecaoSair = BG_RED;
+
+        // printar opcoes
+        char* opcoes[2] = {
+            "Voltar",
+            "Sair"
+        };
+        for(int i = 1; i <= 2; i++){
+            if(i == selected){
+                if(i == 2){
+                    // sair
+                    printf(" %s%s\n"RESET, fundoSelecaoSair, opcoes[i-1]);
+                } else {
+                    printf(" %s%s\n"RESET, fundoSelecaoNormal, opcoes[i-1]);
+                }
+            } else {
+                if(i == 2){
+                    // sair
+                    printf(" %s%s\n"RESET, corTextoSair, opcoes[i-1]);
+                } else {
+                    printf(" %s%s\n"RESET, corTextoNormal, opcoes[i-1]);
+                }
+            }
+        }
+        printf("\n");
+        int tamanhoStr = strlen(titulo);
+        repetirChar(30+tamanhoStr, '-', BLUE);
+        printf("\n\n");
+    }
+    for(int i = 0; i < paginaAtual -1; i++){
+        // avancar no noFila
+        int countPagina = 0;
+        while(divisaoPaginas[i][countPagina] > 0){
+            no = no->prox;
+            countPagina++;
+        }
+    }
+    
+    while(divisaoPaginas[paginaAtual-1][count] > 0){
+        chamado cham = no->chamado;
+        char * color = YELLOW;
+        if((selected == count + 3 && paginaAtual == 1) || (selected == count +1 && paginaAtual > 1)){
+            // chamado selecionado
+            color = BLUE;
+        }
+        printf("%s +--------------------------------------------------+\n"RESET, color);
+        printf("%s| %s%-50s %s|\n"RESET, color, BLUE, cham.titulo, color);
+        
+        // prioridade
+        printf("%s| %sPrioridade: %s%-38d %s|\n", color, MAGENTA, WHITE, cham.prioridade, color);
+        
+        // criador
+        printf("%s| %sCriador: %s%-41s %s|\n"RESET, color, MAGENTA, WHITE, cham.criador, color);
+
+        // data e hora
+        printf("%s| %sData e Hora: %s%02d/%02d/%04d %02d:%02d:%02d%-18s %s|\n",
+        color, MAGENTA, WHITE,
+        cham.tempoComplexo.dia, cham.tempoComplexo.mes, cham.tempoComplexo.ano,
+        cham.tempoComplexo.horas, cham.tempoComplexo.minutos, cham.tempoComplexo.segundos,
+        "", color);
+        
+        // linha vazia
+        printf("%s| %-50s %s|\n"RESET, color, "", color);
+        // descricao
+        char descricao[7][50] = {0};
+        int linhas = quebrarDescricao(cham.descricao, descricao);
+        // descricao
+        for(int i = 0; i < linhas; i++){
+            printf("%s| %s%-50s %s|\n"RESET, color, CYAN, descricao[i], color);
+        }
+        // separador
+        printf("%s +--------------------------------------------------+\n"RESET, color);
+        count++;
+        no = no->prox;
+    }
+    
+    printf("\033[42;1H"); // ir pra linha 42 coluna 1
+    printf(BLUE" Pagina %d/%d"RESET, paginaAtual, totalPaginas);
+}
+
+/// @brief marcar ou desmarcar um chamado no menu de concluir chamado em andamento
+/// @param paginaAtual pagina atual
+/// @param selected chamado selecionado
+/// @param divisaoLinhas divisao de linhas
+/// @param marcar 1 para marcar, 0 para desmarcar
+static void updateChamado(int paginaAtual, int selected, int ** divisaoLinhas, int ** divisaoPaginas, int marcar){
+    int linhaInicio = divisaoLinhas[paginaAtual-1][selected - 1];
+    if(linhaInicio == 0) linhaInicio = 1; // chamado nao existe
+    printf("\033[%d;1H\033[K", linhaInicio); // move para linha e coluna 1 e limpa a linha
+    fila* fAndamento = estruturasGlobais.filaAndamento;
+    noFila* no = fAndamento->first;
+    chamado cham;
+
+    for(int i = 0; i < paginaAtual - 1; i++){
+        // avancar no noFila
+        int countPagina = 0;
+        while(divisaoPaginas[i][countPagina] > 0){
+            no = no->prox;
+            countPagina++;
+        }
+    }
+    for(int i = 1; i < selected; i++){
+        no = no->prox;
+    }
+    cham = no->chamado;
+    char* color = marcar ? BLUE : YELLOW;
+    // printar chamado
+    printf("%s +--------------------------------------------------+\n"RESET, color);
+    printf("\033[%d;1H\033[K", ++linhaInicio);
+
+    printf("%s| %s%-50s %s|\n"RESET, color, BLUE, cham.titulo, color);
+    printf("\033[%d;1H\033[K", ++linhaInicio);
+
+    printf("%s| %sPrioridade: %s%-38d %s|\n", color, MAGENTA, WHITE, cham.prioridade, color);
+    printf("\033[%d;1H\033[K", ++linhaInicio);
+
+    printf("%s| %sCriador: %s%-41s %s|\n"RESET, color, MAGENTA, WHITE, cham.criador, color);
+    printf("\033[%d;1H\033[K", ++linhaInicio);
+
+    printf("%s| %sData e Hora: %s%02d/%02d/%04d %02d:%02d:%02d%-18s %s|\n",
+    color, MAGENTA, WHITE,
+    cham.tempoComplexo.dia, cham.tempoComplexo.mes, cham.tempoComplexo.ano,
+    cham.tempoComplexo.horas, cham.tempoComplexo.minutos, cham.tempoComplexo.segundos,
+    "", color);
+    printf("\033[%d;1H\033[K", ++linhaInicio);
+
+    printf("%s| %-50s %s|\n"RESET, color, "", color);
+    printf("\033[%d;1H\033[K", ++linhaInicio);
+
+    char descricao[7][50] = {0};
+    int linhas = quebrarDescricao(cham.descricao, descricao);
+    // descricao
+    for(int i = 0; i < linhas; i++){
+        printf("%s| %s%-50s %s|\n"RESET, color, CYAN, descricao[i], color);
+        printf("\033[%d;1H\033[K", ++linhaInicio);
+    }
+    // separador
+    printf("%s +--------------------------------------------------+"RESET, color);
+    
+}
+
+/// @brief função para manipular o menu de concluir chamado em andamento
+static void menuHandlerConcluirChamado(void){
+    esperar_tamanho_minimo(42, 60);
+    if(terminalPequenoAlertado){   
+        terminalPequenoAlertado = 0;
+    }
+    clear();
+    int totalPaginas = 0;
+    int ** divisaoPaginas = NULL;
+    int ** divisaoLinhas = NULL;
+    carregarDadosMenuConcluirChamado(&totalPaginas, &divisaoPaginas, &divisaoLinhas);
+    int paginaAtual = 1;
+    int selected = 1;
+
+    printarMenuConcluirChamado(divisaoPaginas, divisaoLinhas, totalPaginas, paginaAtual, selected);
+    while(1){
+        int ultimaOpcao = 0;
+        if(paginaAtual == 1){
+            // primeira pagina tem 2 opcoes extras (voltar e sair)
+            ultimaOpcao +=2;
+        }
+        for(int i = 0; divisaoPaginas[paginaAtual-1][i] > 0; i++){
+            ultimaOpcao++;
+        }
+        KeyCode k = userGetKey();
+        if(k == RESIZE_EVENT){
+            esperar_tamanho_minimo(42, 60);
+            if(terminalPequenoAlertado){
+                clear();
+                printarMenuConcluirChamado(divisaoPaginas, divisaoLinhas, totalPaginas, paginaAtual, selected);
+                terminalPequenoAlertado = 0;
+            }
+        }else if(k == KC_ESC){
+            popPilha(estruturasGlobais.pil);
+            break;
+        }else if(k == KC_UP){
+            if(selected == 2 && paginaAtual == 1){
+                // desmarcar sair
+                updateOption(5, "Sair", "", RED);
+                // marcar voltar
+                updateOption(4, "Voltar", BG_BLUE, "");
+                selected--;
+            }else if(selected == 3 && paginaAtual == 1){
+                // desmarcar chamado
+                updateChamado(paginaAtual, selected - 2, divisaoLinhas, divisaoPaginas, 0);
+                selected--;
+                // marcar sair
+                updateOption(5, "Sair", BG_RED, "");
+            }else{
+                if(selected == 1 && paginaAtual > 1){
+                    // ir para pagina anterior
+                    paginaAtual--;
+                    // selecionar ultima opcao da pagina anterior
+                    int ultimaOpcaoTemp = 0;
+                    for(int i = 0; divisaoPaginas[paginaAtual-1][i] > 0; i++){
+                        ultimaOpcaoTemp++;
+                    }
+                    if(paginaAtual == 1){
+                        ultimaOpcaoTemp += 2; // ajustar para voltar e sair
+                    }
+                    selected = ultimaOpcaoTemp;
+                    clear();
+                    printarMenuConcluirChamado(divisaoPaginas, divisaoLinhas, totalPaginas, paginaAtual, selected);
+                }else if(selected > 1){
+                    int selectedPrev = selected;
+                    if(paginaAtual == 1){
+                        selectedPrev -= 2; // ajustar para pular opcoes voltar e sair
+                    }
+                    updateChamado(paginaAtual, selectedPrev, divisaoLinhas, divisaoPaginas, 0);
+                    selected--;
+                    selectedPrev--;
+                    updateChamado(paginaAtual, selectedPrev, divisaoLinhas, divisaoPaginas, 1);
+                }
+            }
+        }else if(k == KC_DOWN){
+            if(selected == 1 && paginaAtual == 1){
+                // desmarcar voltar
+                updateOption(4, "Voltar", "", BLUE);
+                // marcar sair
+                updateOption(5, "Sair", BG_RED, "");
+                selected++;
+            }else if(selected == 2 && paginaAtual == 1){
+                // desmarcar sair
+                updateOption(5, "Sair", "", RED);
+                selected++;
+                updateChamado(paginaAtual, selected - 2, divisaoLinhas, divisaoPaginas, 1);
+            }else{
+                if(selected == ultimaOpcao && paginaAtual < totalPaginas){
+                    selected = 1;
+                    paginaAtual++;
+                    clear();
+                    printarMenuConcluirChamado(divisaoPaginas, divisaoLinhas, totalPaginas, paginaAtual, selected);
+                }else if(selected < ultimaOpcao){
+                    int selectedPrev = selected;
+                    if(paginaAtual == 1){
+                        selectedPrev -= 2; // ajustar para pular opcoes voltar e sair
+                    }
+                    updateChamado(paginaAtual, selectedPrev, divisaoLinhas, divisaoPaginas, 0);
+                    selected++;
+                    selectedPrev++;
+                    updateChamado(paginaAtual, selectedPrev, divisaoLinhas, divisaoPaginas, 1);
+                }
+            }
+        }else if(k == KC_RIGHT){
+            if(paginaAtual < totalPaginas){
+                paginaAtual++;
+                selected = 1;
+                clear();
+                printarMenuConcluirChamado(divisaoPaginas, divisaoLinhas, totalPaginas, paginaAtual, selected);
+            }
+        }else if(k == KC_LEFT){
+            if(paginaAtual > 1){
+                paginaAtual--;
+                selected = 1;
+                clear();
+                printarMenuConcluirChamado(divisaoPaginas, divisaoLinhas, totalPaginas, paginaAtual, selected);
+            }
+        }else if(k == KC_ENTER){
+            if(paginaAtual == 1 && selected == 1){
+                // voltar
+                popPilha(estruturasGlobais.pil);
+                break;
+            }else if(paginaAtual == 1 && selected == 2){
+                // sair
+                menuHandler m = createMenu(9);
+                pushPilha(estruturasGlobais.pil, m);
+                break;
+            }else{
+                // concluir chamado selecionado
+            }
+        }
+    }
+    for(int i = 0; i < totalPaginas; i++){
+        free(divisaoPaginas[i]);
+        free(divisaoLinhas[i]);
+    }
+    free(divisaoPaginas);
+    free(divisaoLinhas);
+}
+
+/// @brief função para manipular a lógica de funcao separadas de menus do sistema
+/// @param type tipo do menu
+/// @param opcao opcao selecionada
+/// @param user usuario logado
+static void funcaoMainExtra(int type, int opcao, char* user){
+    switch(type){
+            // criar chamado
+        case 3: {
+            char t[50] = "";
+            char d[350] = "";
+            menuCriarChamadoHandler(0, opcao, user, t, d, 0);
+            break;
+        }   
+        case 4:
+            // visualizar chamados
+            menuVisualizarChamados(opcao, user);
+            break;
+        case 7:
+            // editar usuarios
+            break;
+        case 14:
+            // concluir chamado em andamento
+            menuHandlerConcluirChamado();
+            break;
+    }
 }
 
 
+// --------------------------------
+// FUNCOES DE CONTEUDO EXTRA
+// --------------------------------
 
-// para estaticas, relatorios e logs, (tipos 6, 8, 9)
-// para o tipo 4 tambem (visualizar chamados)
-// as info seram printadas em baixo
-static void conteudoExtra(int type, Estruturas dados){
+/// @brief função para o menu de atender o próximo chamado  
+static void menuAtenderProximoChamado(void){
+    filaPrioridade* fp = estruturasGlobais.filaPrioridade;
+    fila* f = estruturasGlobais.filaNormal;
+    noFila* no = f->first;
+    chamado chamadoAtender;
+    if(fp->n > 0){
+        chamadoAtender = fp->elementos[0];
+    }else{
+        chamadoAtender = no->chamado;
+    }
+     
+    printf(GREEN" +--------------------------------------------------+"RESET);
+    printf("\n");
+    // titulo
+    printf("%s| %s%-50s %s|\n"RESET, GREEN, BLUE, chamadoAtender.titulo, GREEN);
+    
+    // prioridade
+    printf("%s| %sPrioridade: %s%-38d %s|\n", GREEN, MAGENTA, WHITE, chamadoAtender.prioridade, GREEN);
+    
+    // criador
+    printf("%s| %sCriador: %s%-41s %s|\n"RESET, GREEN, MAGENTA, WHITE, chamadoAtender.criador, GREEN);
+    
+    // data e hora
+    printf("%s| %sData e Hora: %s%02d/%02d/%04d %02d:%02d:%02d%-18s %s|\n",
+       GREEN, MAGENTA, WHITE,
+       chamadoAtender.tempoComplexo.dia, chamadoAtender.tempoComplexo.mes, chamadoAtender.tempoComplexo.ano,
+       chamadoAtender.tempoComplexo.horas, chamadoAtender.tempoComplexo.minutos, chamadoAtender.tempoComplexo.segundos,
+       "", GREEN);
+    
+       // descricao
+    char descricao[7][50] = {0};
+    int linhas = quebrarDescricao(chamadoAtender.descricao, descricao);
+    // descricao
+    for(int i = 0; i < linhas; i++){
+        printf("%s| %s%-50s %s|\n"RESET, GREEN, CYAN, descricao[i], GREEN);
+    }
+    // separador
+    printf(GREEN" +--------------------------------------------------+"RESET);
+}
+
+
+/// @brief função para conteúdo extra dos menus
+/// @param type tipo do menu
+static void conteudoExtra(int type){
     switch(type){
-        case 4:
-            // visualizar chamados
-            mostrarChamados(dados);
-            break;
         case 6:
             // estatisticas
             break;
@@ -815,18 +1771,22 @@ static void conteudoExtra(int type, Estruturas dados){
         case 9:
             // logs
             break;
+        case 13:
+            // atender proximo chamado
+            menuAtenderProximoChamado();
+            break;
     }
 }
 
 
 // vai criar um struct do determinado tipo de menu, e vai retornar ele
-static menuHandler createMenu(int type){
+menuHandler createMenu(int type){
     // menu 1 sempre estara na pilha, por ser a "raiz" e ter sido criada no menu.c
     // entao nao e necessario que seja criado aqui
     menuHandler menuReturn;
     switch(type){
-        case 2:
-            // criar chamado tem preferencia?
+        case 2: // Criar chamado
+            menuReturn = (menuHandler){0};
             menuReturn.type = 2;
             menuReturn.titulo = "Criar chamado";
             menuReturn.frase = "Esse chamado tem prioridade?";
@@ -835,139 +1795,202 @@ static menuHandler createMenu(int type){
             menuReturn.options[1] = "Nao";
             menuReturn.options[2] = "Voltar";
             menuReturn.options[3] = "Sair";
+
+            menuReturn.minLinhas = 10;
+            menuReturn.minColunas = 45;
             menuReturn.funcaoMain = NULL;
             menuReturn.funcaoExtra = NULL;
             break;
-    
-        case 3:
-            // funcao separada, escolher prioridade > 0 se tiver, e o nome do chamado
+
+        case 3: // Função separada, prioridade/nome
             menuReturn = (menuHandler){0};
             menuReturn.type = 3;
             menuReturn.titulo = "";
             menuReturn.frase = "";
             menuReturn.funcaoMain = funcaoMainExtra;
             break;
-    
-        case 4:
-            // filtrar chamados 
-            menuReturn.type = 4;
-            menuReturn.titulo = "Visualizar Chamados";
-            menuReturn.frase = "";
-            menuReturn.quant = 5;
-            menuReturn.options[0] = "Atender proximo chamado";
-            menuReturn.options[1] = "Concluir chamado em andamento";
-            menuReturn.options[2] = "Deletar chamado fechado";
-            menuReturn.options[3] = "Voltar";
-            menuReturn.options[4] = "Sair";
-            menuReturn.funcaoMain = NULL;
-            menuReturn.funcaoExtra = conteudoExtra;
-            break;
-    
-        case 5:
-            // funcao separada, chamados irao aparecer na direita
-            // sera possivel editar pelo botao (ou seta para direita e esquerda)
+
+        case 4: // Função separada, edição dos chamados
             menuReturn = (menuHandler){0};
-            menuReturn.type = 5;
+            menuReturn.type = 4;
             menuReturn.titulo = "";
             menuReturn.frase = "";
             menuReturn.funcaoMain = funcaoMainExtra;
             break;
-    
-        case 6:
-            // Estatisticas, vai aparecer as info em baixo do menu de opcoes
-            menuReturn.type = 6;
+
+        case 5: // Estatísticas
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 5;
             menuReturn.titulo = "Estatisticas";
             menuReturn.frase = "";
             menuReturn.quant = 2;
             menuReturn.options[0] = "Voltar";
             menuReturn.options[1] = "Sair";
-            menuReturn.funcaoExtra = conteudoExtra;
+
+            menuReturn.minLinhas = 10;
+            menuReturn.minColunas = 25;
             menuReturn.funcaoMain = NULL;
+            menuReturn.funcaoExtra = conteudoExtra;
             break;
-    
-        case 7:
-            // usuarios (caso for adm sera possivel editar)
-            // infos vao ficar na direita (edicao via botao ou via seta para direita ou esquerda);
-            // funcao separada
+
+        case 6: // Função separada, usuários
             menuReturn = (menuHandler){0};
-            menuReturn.type = 7;
+            menuReturn.type = 6;
             menuReturn.titulo = "";
             menuReturn.frase = "";
             menuReturn.funcaoMain = funcaoMainExtra;
             break;
-    
-        case 8:
-            // relatorios
-            // infos em baixo 
-            menuReturn.type = 8;
+
+        case 7: // Relatórios
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 7;
             menuReturn.titulo = "Relatorio das ultimas acoes";
             menuReturn.frase = "";
             menuReturn.quant = 3;
             menuReturn.options[0] = "Deletar todo historico de acoes";
             menuReturn.options[1] = "Voltar";
             menuReturn.options[2] = "Sair";
-            menuReturn.funcaoExtra = conteudoExtra;
+
+            menuReturn.minLinhas = 10;
+            menuReturn.minColunas = 40;
             menuReturn.funcaoMain = NULL;
+            menuReturn.funcaoExtra = conteudoExtra;
             break;
-    
-        case 9:
-            // logs do sistema
-            // infos em baixo
-            menuReturn.type = 9;
+
+        case 8: // Logs
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 8;
             menuReturn.titulo = "Logs do sistema";
             menuReturn.frase = "";
             menuReturn.quant = 3;
             menuReturn.options[0] = "Deletar todo historico de logs";
             menuReturn.options[1] = "Voltar";
             menuReturn.options[2] = "Sair";
-            menuReturn.funcaoExtra = conteudoExtra;
+
+            menuReturn.minLinhas = 10;
+            menuReturn.minColunas = 35;
             menuReturn.funcaoMain = NULL;
+            menuReturn.funcaoExtra = conteudoExtra;
             break;
-    
-        case 10:
-            // menu de Sair
-            // nao tem a opcao sair nem de voltar
-            menuReturn.type = 10;
+
+        case 9: // Menu de sair
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 9;
             menuReturn.titulo = "Sair";
             menuReturn.frase = "Voce deseja mesmo fechar o programa?";
             menuReturn.quant = 2;
             menuReturn.options[0] = "Sim";
             menuReturn.options[1] = "Nao";
+
+            menuReturn.minLinhas = 10;
+            menuReturn.minColunas = 50;
             menuReturn.funcaoMain = NULL;
             menuReturn.funcaoExtra = NULL;
             break;
-        case 11:
-            // menu de deletar todos relatorios
-            // nao tem a opcao sair nem de voltar
-            menuReturn.type = 11;
+
+        case 10: // Deletar todos relatórios
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 10;
             menuReturn.titulo = "Deletar todos relatorios";
             menuReturn.frase = "Voce deseja mesmo deletar todos os relatorios?";
             menuReturn.quant = 2;
             menuReturn.options[0] = "Sim";
             menuReturn.options[1] = "Nao";
+
+            menuReturn.minLinhas = 10;
+            menuReturn.minColunas = 60;
             menuReturn.funcaoMain = NULL;
             menuReturn.funcaoExtra = NULL;
             break;
-        case 12:
-            // menu de deletar logs
-            // nao tem a opcao sair nem de voltar
-            menuReturn.type = 12;
+
+        case 11: // Deletar logs
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 11;
             menuReturn.titulo = "Deletar logs";
             menuReturn.frase = "Voce deseja mesmo deletar todos os logs?";
             menuReturn.quant = 2;
             menuReturn.options[0] = "Sim";
             menuReturn.options[1] = "Nao";
+
+            menuReturn.minLinhas = 10;
+            menuReturn.minColunas = 60;
             menuReturn.funcaoMain = NULL;
             menuReturn.funcaoExtra = NULL;
             break;
+        case 12: 
+            // aceitar proximo chamado (nao tem chamados abertos)
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 12;
+            menuReturn.titulo = "Aceitar proximo chamado";
+            menuReturn.frase = "Nao existem chamados pendentes no momento.";
+            menuReturn.quant = 2;
+            menuReturn.options[0] = "Voltar";
+            menuReturn.options[1] = "Sair";
+
+            menuReturn.minLinhas = 10;
+            menuReturn.minColunas = 60;
+            menuReturn.funcaoMain = NULL;
+            menuReturn.funcaoExtra = NULL;
+            break;
+        case 13:
+            // atender proximo chamado (tem chamados abertos)
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 13;
+            menuReturn.titulo = "Atender proximo chamado";
+            menuReturn.frase = "Deseja atender o proximo chamado da fila?";
+            menuReturn.quant = 2;
+            menuReturn.options[0] = "Sim";
+            menuReturn.options[1] = "Nao";
+            menuReturn.minLinhas = 25;
+            menuReturn.minColunas = 60;
+            menuReturn.funcaoMain = NULL;
+            menuReturn.funcaoExtra = conteudoExtra;
+            break;
+        case 14:
+            // concluir chamado em andamento
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 14;
+            menuReturn.titulo = "";
+            menuReturn.frase = "";
+            menuReturn.funcaoMain = funcaoMainExtra;
+            break;
+        case 15:
+            // concluir chamado em andamente (nao tem chamados em andamento)
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 15;
+            menuReturn.titulo = "Concluir chamado em andamento";
+            menuReturn.frase = "Nenhum chamado em andamento disponivel para conclusao.";
+            menuReturn.quant = 2;
+            menuReturn.options[0] = "Voltar";
+            menuReturn.options[1] = "Sair";
+            menuReturn.minLinhas = 10;
+            menuReturn.minColunas = 60;
+            menuReturn.funcaoMain = NULL;
+            menuReturn.funcaoExtra = NULL;
+            break;
+        case 16:
+            // confirmacao de concluir chamado
+            menuReturn = (menuHandler){0};
+            menuReturn.type = 15;
+            menuReturn.titulo = "Concluir chamado em andamento";
+            menuReturn.frase = "Tem certeza de que deseja concluir este chamado?";
+            menuReturn.quant = 2;
+            menuReturn.options[0] = "Sim";
+            menuReturn.options[1] = "Nao";
+            menuReturn.minLinhas = 10;
+            menuReturn.minColunas = 60;
+            menuReturn.funcaoMain = NULL;
+            menuReturn.funcaoExtra = conteudoExtra;
+            break;
     }
+
     return menuReturn;
 }
 
 // funcao para esc
 void menuHandlerEsc(int type, pilha* p){
     if(type == 1){
-        menuHandler mSair = createMenu(10);
+        menuHandler mSair = createMenu(9);
         pushPilha(p, mSair);
     }else{
         popPilha(p);
@@ -992,27 +2015,27 @@ void handlerMenuSelect(int type, int selected, pilha **p, char* user){
                     break;
                 case 3:
                     // Estatísticas
-                    m = createMenu(6);
+                    m = createMenu(5);
                     pushPilha(*p, m);
                     break;
                 case 4:
                     // usuarios
-                    m = createMenu(7);
+                    m = createMenu(6);
                     pushPilha(*p, m);
                     break;
                 case 5:
                     // relatorios
-                    m = createMenu(8);
+                    m = createMenu(7);
                     pushPilha(*p, m);
                     break;
                 case 6:
                     // logs
-                    m = createMenu(9);
+                    m = createMenu(8);
                     pushPilha(*p, m);
                     break;
                 case 7:
                     // sair
-                    m = createMenu(10);
+                    m = createMenu(9);
                     pushPilha(*p, m);
                     break;
             }
@@ -1037,26 +2060,7 @@ void handlerMenuSelect(int type, int selected, pilha **p, char* user){
                 
             }
             break;
-        case 4:
-            // visualizar as acoes
-            switch(selected){
-                case 1:
-                case 2:
-                case 3:
-                    // qual tipo de edicao deseja fazer
-                    pushPilha(*p, createMenu(5));
-                    break;
-                case 4:
-                    // voltar
-                    popPilha(*p);
-                    break;
-                case 5:
-                    // sair
-                    pushPilha(*p, createMenu(10));
-                    break;
-            }
-            break;
-        case 6:
+        case 5:
             // Estatísticas
             switch(selected){
                 // voltar e sair 
@@ -1068,7 +2072,7 @@ void handlerMenuSelect(int type, int selected, pilha **p, char* user){
                     break;
             }
             break;
-        case 8:
+        case 7:
             // relatorios
             switch(selected){
                 case 1:
@@ -1085,7 +2089,7 @@ void handlerMenuSelect(int type, int selected, pilha **p, char* user){
                     break;
             }
             break;
-        case 9:
+        case 8:
             // logs
             switch(selected){
                 case 1:
@@ -1102,7 +2106,7 @@ void handlerMenuSelect(int type, int selected, pilha **p, char* user){
                     break;
             }
             break;
-        case 10:
+        case 9:
             // menu de sair
             switch(selected){
                 case 1:
@@ -1115,7 +2119,7 @@ void handlerMenuSelect(int type, int selected, pilha **p, char* user){
                     break;
             }
             break;
-        case 11:
+        case 10:
             // menu de deletar todos relatorios
             switch(selected){
                 case 1:
@@ -1130,7 +2134,7 @@ void handlerMenuSelect(int type, int selected, pilha **p, char* user){
                     break;
             }
             break;
-        case 12:
+        case 11:
             // menu de deletar todos os logs
             switch(selected){
                 case 1:
@@ -1145,5 +2149,51 @@ void handlerMenuSelect(int type, int selected, pilha **p, char* user){
                     break;
             }
             break;
+        case 12:
+            switch(selected){
+                case 1:
+                    // voltar
+                    popPilha(*p);
+                    break;
+                case 2:
+                    // sair
+                    pushPilha(*p, createMenu(9));
+                    break;
+            }
+            break;
+        case 13:
+            switch(selected){
+                case 1:
+                    {
+                        // atender chamado
+                        // colocar na fila de atendimento e remover da fila de prioridade ou normal
+                        chamado c;
+                        if(estruturasGlobais.filaPrioridade->n > 0)
+                            c = filaPrioridadeRemover(estruturasGlobais.filaPrioridade);
+                        else{
+                            c = filaRetirar(estruturasGlobais.filaNormal);
+                        }
+                        filaInserir(estruturasGlobais.filaAndamento, c);
+                        popPilha(*p); // tira o menu de atender chamado
+                    }
+                    break;
+                case 2:
+                    // nao atender, voltar
+                    popPilha(*p); // tira o menu de atender chamado
+                    break;
+            }
+            break;
+        case 15:
+            switch(selected){
+                case 1:
+                    // voltar
+                    popPilha(*p);
+                    break;
+                case 2:
+                    // sair
+                    pushPilha(*p, createMenu(9));
+                    break;
+            }
+                    
     }
 }

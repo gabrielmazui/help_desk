@@ -14,15 +14,14 @@ typedef struct menuHandler{
     char* frase;
     int quant;
     char* options[15];
-    void(*funcaoMain)(int, int, Estruturas, char*);
-    void(*funcaoExtra)(int, Estruturas);
+    void(*funcaoMain)(int, int, char*);
+    void(*funcaoExtra)(int);
+    int minLinhas; // tamanho minimo de linhas do terminal para esse menu
+    int minColunas; // tamanho minimo de colunas do terminal para esse menu
 }menuHandler;
 
-// funcao que retorna Keycode (seta pra cima pra baixo, enter, esc)
-KeyCode userGetKey(void);
-
-// funcao para ler um char por vez
-char getChar(void);
+extern int lastSelected;
+//ultima opcao selecionada no menu anterior
 
 // funcao para limpar a tela
 void clear(void);

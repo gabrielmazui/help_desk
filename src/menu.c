@@ -20,11 +20,11 @@
 #include "fila.h"
 #include "filaprioridade.h"
 #include "utils.h"
+#include "terminal_utils.h"
 
 // funcao para mostrar pos animacao de carregamento
 
 static void bemVindo(void){
-    printf("\n");
     repetirChar(35,'=', CYAN);
     printf(GREEN"BEM-VINDO"RESET);
     repetirChar(35,'=', CYAN);
@@ -53,23 +53,15 @@ static void bemVindo(void){
     printf("\n");
 }
 
-// funcao para atualizar apenas uma opcao do menu
-static void updateOption(int linha, const char* texto, const char* fundo, const char* cor) {
-    printf("\033[%d;1H\033[K", linha); // move para linha e coluna 1 e limpa a linha
-    printf(" %s%s%s\n" RESET, fundo, cor, texto);
-    fflush(stdout);
-}
-
 // funcao para desenhar o menu atual na tela
-static void desenharMenuAtual(menuHandler m, int selected, Estruturas dados){
+static void desenharMenuAtual(menuHandler m, int selected){
     
     if(m.type == 1){
         bemVindo();
+        printf("\n");
         fflush(stdout);
     }
     
-    // criar um struct e igualar ele ao struct do top da fila sempre
-    printf("\n");
     repetirChar(15, '-', BLUE);
     printf(BLUE"%s"RESET, m.titulo);
     repetirChar(15, '-', BLUE);
@@ -129,7 +121,7 @@ static void desenharMenuAtual(menuHandler m, int selected, Estruturas dados){
         // se o menu tiver uma funcao extra, mais coisa para printar
         // vai printar a baixo do menu em si, em baixo das opcoes
         printf("\n\n");
-        m.funcaoExtra(m.type, dados);
+        m.funcaoExtra(m.type);
     }
 }
 
@@ -155,6 +147,8 @@ void mainMenu(char* user){
     menu1.frase = "";
     menu1.titulo = titulo;
     menu1.quant = 7;
+    menu1.minLinhas = 30;
+    menu1.minColunas = 80;
     char* options[] = {"Criar chamado", "Visualizar Chamados", "Estatisticas", "Usuarios", "Relatorios", "Logs", "Sair"};
     for(int i = 0; i < menu1.quant; i++){
         menu1.options[i] = options[i];
@@ -164,9 +158,8 @@ void mainMenu(char* user){
     
     
     // colocar no top da fila
-    Estruturas estruturas;
-    initEstruturas(&estruturas);
-    pilha * p = estruturas.pil;
+    initEstruturas();
+    pilha * p = estruturasGlobais.pil;
     pushPilha(p, menu1);
     // colocar menu1 no topo
     
@@ -176,8 +169,9 @@ void mainMenu(char* user){
     
     menuHandler menuEscolhido;
     menuEscolhido = topoPilha(p);
-    desenharMenuAtual(menuEscolhido, selected, estruturas);
+    // ja verifica se precisa redimensionar a tela antes de mostrar o menu
     
+    desenharMenuAtual(menuEscolhido, selected);
     // loop que vai ler as teclas, e mudar os menus caso for necessario
     while(1){
 
@@ -185,17 +179,33 @@ void mainMenu(char* user){
         // chame ela e va para a proxima iteracao
         
         if(menuEscolhido.funcaoMain != NULL){
-            menuEscolhido.funcaoMain(menuEscolhido.type, lastSelected, estruturas, user);
+            menuEscolhido.funcaoMain(menuEscolhido.type, lastSelected, user);
             // depois da funcao separada, verificar novamente o topo da pilha
             selected = 1;
             clear();
             menuEscolhido = topoPilha(p);
-            desenharMenuAtual(menuEscolhido, selected, estruturas);
+            desenharMenuAtual(menuEscolhido, selected);
             continue;
+        }
+
+        esperar_tamanho_minimo(menuEscolhido.minLinhas, menuEscolhido.minColunas);
+        if(terminalPequenoAlertado){
+            terminalPequenoAlertado = 0;
+            clear();
+            desenharMenuAtual(menuEscolhido, selected);
         }
         
         KeyCode tecla = userGetKey();
-        if(tecla == KC_ENTER){
+        if(tecla == RESIZE_EVENT){
+            esperar_tamanho_minimo(menuEscolhido.minLinhas, menuEscolhido.minColunas);
+            if(terminalPequenoAlertado){
+                terminalPequenoAlertado = 0;
+                clear();
+                desenharMenuAtual(menuEscolhido, selected);
+            }
+            
+            continue;
+        }else if(tecla == KC_ENTER){
             // chamar funcao com o tipo de menu e com o selected , do outro arquivo
             handlerMenuSelect(menuEscolhido.type, selected, &p, user);
             lastSelected = selected;
@@ -207,7 +217,7 @@ void mainMenu(char* user){
                 // previnir o desenho do menu
                 continue;
             }
-            desenharMenuAtual(menuEscolhido, selected, estruturas);
+            desenharMenuAtual(menuEscolhido, selected);
             // a partir de agora, na proxima iteracao ele vai ler o struct do topo da pilha
         }else if(tecla == KC_UP){
             if(selected > 1){
@@ -227,11 +237,11 @@ void mainMenu(char* user){
                 
                 
                 // atualizar a linha que estava selecionada antes
-                updateOption(linhas + selected - 1, menuEscolhido.options[selected-1], fundo1, corTexto1);
+                updateOption(linhas + selected - 2, menuEscolhido.options[selected-1], fundo1, corTexto1);
                 selected--;
                 
                 // atualizar a opcao selecionada agora
-                updateOption(linhas + selected - 1, menuEscolhido.options[selected-1], fundo2, corTexto2);
+                updateOption(linhas + selected - 2, menuEscolhido.options[selected-1], fundo2, corTexto2);
                 
             }
         }else if(tecla == KC_DOWN){
@@ -252,11 +262,11 @@ void mainMenu(char* user){
                 
                 
                 // atualizar a linha que estava selecionada antes
-                updateOption(linhas + selected - 1, menuEscolhido.options[selected-1], fundo1, corTexto1);
+                updateOption(linhas + selected - 2, menuEscolhido.options[selected-1], fundo1, corTexto1);
                 selected++;
                 
                 // atualizar a opcao selecionada agora
-                updateOption(linhas + selected - 1, menuEscolhido.options[selected-1], fundo2, corTexto2);
+                updateOption(linhas + selected - 2, menuEscolhido.options[selected-1], fundo2, corTexto2);
             }
         }else if(tecla == KC_ESC){
             // chama funcao de voltar 
@@ -265,10 +275,10 @@ void mainMenu(char* user){
             selected = 1;
             clear();
             menuEscolhido = topoPilha(p);
-            desenharMenuAtual(menuEscolhido, selected, estruturas);
+            desenharMenuAtual(menuEscolhido, selected);
         }
     }
     // liberar estruturas de dados
-    filaLiberar(&estruturas.filaNormal);
-    pilhaLiberar(&estruturas.pil);
+    filaLiberar(&estruturasGlobais.filaNormal);
+    pilhaLiberar(&estruturasGlobais.pil);
 }

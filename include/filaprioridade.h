@@ -19,6 +19,9 @@ void filaPrioridadeInserir(filaPrioridade* f, chamado c);
 // remover da fila de prioridade
 chamado filaPrioridadeRemover(filaPrioridade* f);
 
+// copiar fila de prioridade
+filaPrioridade* filaPrioridadeCopiar(filaPrioridade* original);
+
 // liberar fila de prioridade
 void filaPrioridadeLiberar(filaPrioridade** f);
 

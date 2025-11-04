@@ -56,5 +56,6 @@ void filaLiberar(fila ** f){
         free(no);
         no = temp;
     }
-    free(f);
+    free(*f);
+    *f = NULL;
 }

@@ -59,6 +59,8 @@ typedef struct chamado{
 // status = 2 (em andamento)
 // status = 3 (fechado)
 
+menuHandler createMenu(int type);
+
 void handlerMenuSelect(int type, int selected, pilha** p, char* user);
 
 void menuHandlerEsc(int type, pilha * p);
