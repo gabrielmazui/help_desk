@@ -19,10 +19,13 @@ typedef struct filaDupla{
 filaDupla* criarFilaDupla(void);
 
 // funcao inserir na fila duplamente encadeada
-void insereFilaDupla(filaDupla* f, int pos, void* dado);
+void insereFilaDupla(filaDupla* f, int pos, chamado cham);
 
 // funcao remover da fila duplamente encadeada
 chamado removerFilaDupla(filaDupla* f, int pos);
+
+// funcao esvaziar a fila duplamente encadeada
+void esvaziarFilaDupla(filaDupla* f);
 
 // funcao para liberar a fila duplamente encadeada
 void liberarFilaDupla(filaDupla** f);

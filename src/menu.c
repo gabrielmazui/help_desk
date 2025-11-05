@@ -19,11 +19,15 @@
 #include "pilha.h"
 #include "fila.h"
 #include "filaprioridade.h"
+#include "filadupla.h"
 #include "utils.h"
 #include "terminal_utils.h"
 
-// funcao para mostrar pos animacao de carregamento
+int lastSelected = 1; // opcao escolhida no menu anterior, util para as funcoes separadas
+// sera necessario enviar essa informacao para as funcoes
 
+
+// funcao para mostrar pos animacao de carregamento
 static void bemVindo(void){
     repetirChar(35,'=', CYAN);
     printf(GREEN"BEM-VINDO"RESET);
@@ -164,8 +168,6 @@ void mainMenu(char* user){
     // colocar menu1 no topo
     
     int selected = 1; // opcao selecionada no momento
-    int lastSelected = 1; // opcao escolhida no menu anterior, util para as funcoes separadas
-    // sera necessario enviar essa informacao para as funcoes
     
     menuHandler menuEscolhido;
     menuEscolhido = topoPilha(p);
@@ -173,7 +175,7 @@ void mainMenu(char* user){
     
     desenharMenuAtual(menuEscolhido, selected);
     // loop que vai ler as teclas, e mudar os menus caso for necessario
-    while(1){
+    while(p != NULL){
 
         // se o menu escolhido tiver uma funcao externa
         // chame ela e va para a proxima iteracao
@@ -194,7 +196,7 @@ void mainMenu(char* user){
             clear();
             desenharMenuAtual(menuEscolhido, selected);
         }
-        
+    
         KeyCode tecla = userGetKey();
         if(tecla == RESIZE_EVENT){
             esperar_tamanho_minimo(menuEscolhido.minLinhas, menuEscolhido.minColunas);
@@ -203,11 +205,15 @@ void mainMenu(char* user){
                 clear();
                 desenharMenuAtual(menuEscolhido, selected);
             }
-            
             continue;
+
         }else if(tecla == KC_ENTER){
             // chamar funcao com o tipo de menu e com o selected , do outro arquivo
             handlerMenuSelect(menuEscolhido.type, selected, &p, user);
+            if(p == NULL){
+                // se a pilha estiver vazia, sair do loop
+                break;
+            }
             lastSelected = selected;
             selected = 1;
             clear();
@@ -278,7 +284,11 @@ void mainMenu(char* user){
             desenharMenuAtual(menuEscolhido, selected);
         }
     }
+    
     // liberar estruturas de dados
+    liberarFilaDupla(&estruturasGlobais.filadupla);
+    filaPrioridadeLiberar(&estruturasGlobais.filaPrioridade);
+    filaLiberar(&estruturasGlobais.filaAndamento);
     filaLiberar(&estruturasGlobais.filaNormal);
     pilhaLiberar(&estruturasGlobais.pil);
 }

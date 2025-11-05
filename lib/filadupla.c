@@ -4,6 +4,8 @@
 #include "menufunctions.h"
 #include "filadupla.h"
 
+/// @brief Cria uma fila dupla
+/// @return Ponteiro para a fila dupla criada
 filaDupla* criarFilaDupla(void){
     filaDupla* f = (filaDupla*)malloc(sizeof(filaDupla));
     if(f == NULL){
@@ -16,7 +18,11 @@ filaDupla* criarFilaDupla(void){
     return f;
 }
 
-void insereFilaDupla(filaDupla* f, int pos, void* dado){
+/// @brief Insere um elemento na fila dupla
+/// @param f Ponteiro para a fila dupla
+/// @param pos Posição onde o elemento deve ser inserido
+/// @param cham chamado a ser inserido
+void insereFilaDupla(filaDupla* f, int pos, chamado cham){
     if(f == NULL || pos < 0 || pos > f->n){
         // log
         exit(1);
@@ -26,7 +32,7 @@ void insereFilaDupla(filaDupla* f, int pos, void* dado){
         // log
         exit(1);
     }
-    novoNo->chamado = *(chamado*)dado;
+    novoNo->chamado = cham;
     novoNo->prox = NULL;
     novoNo->ant = NULL;
 
@@ -58,6 +64,11 @@ void insereFilaDupla(filaDupla* f, int pos, void* dado){
     f->n++;
 }
 
+
+/// @brief  Remove um elemento da fila dupla
+/// @param f f Ponteiro para a fila dupla
+/// @param pos indice do elemento a ser removido (comeca no 0)
+/// @return Chamado removido
 chamado removerFilaDupla(filaDupla* f, int pos){
     if(f == NULL || f->n == 0 || pos < 0 || pos >= f->n){
         // log
@@ -100,6 +111,26 @@ chamado removerFilaDupla(filaDupla* f, int pos){
     return chamRemovido;
 }
 
+/// @brief Esvazia a fila duplamente encadeada
+/// @param f Ponteiro para a fila duplamente encadeada
+void esvaziarFilaDupla(filaDupla* f){
+    if(f == NULL || f->n == 0){
+        // log
+        exit(1);
+    }
+    noDuplo* atual = f->inicio;
+    while(atual != NULL){
+        noDuplo* temp = atual;
+        atual = atual->prox;
+        free(temp);
+    }
+    f->inicio = NULL;
+    f->fim = NULL;
+    f->n = 0;
+}
+
+/// @brief Libera a memória ocupada pela fila dupla
+/// @param f Ponteiro duplo para a fila dupla
 void liberarFilaDupla(filaDupla** f){
     if(f == NULL || *f == NULL){
         return;

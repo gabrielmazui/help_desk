@@ -119,7 +119,9 @@ KeyCode userGetKey(void) {
             }
 
             // ESC
-            else if (c == 27) return KC_ESC;
+            else if (c == 27){
+                return KC_ESC;
+            }
 
             // Enter
             else if (c == 13) return KC_ENTER;
@@ -284,7 +286,11 @@ KeyCode inputASCII(char *buffer, int maxChars, const char *color, int printarExi
         if (_kbhit()) {
             c = getChar();
 
-            if (c == 27) return KC_ESC; controlarCursor(0);
+            if (c == 27){
+                controlarCursor(0);
+                printf(RESET);
+                return KC_ESC;
+            }
             if (c == '\r') break;
 
             // -------- BACKSPACE ----------
@@ -387,6 +393,7 @@ KeyCode inputASCII(char *buffer, int maxChars, const char *color, int printarExi
             if (c == 27) { // ESC
                 tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
                 controlarCursor(0);
+                printf(RESET);
                 return KC_ESC;
             }
             if (c == '\r' || c == '\n') break;
@@ -513,6 +520,7 @@ KeyCode inputNumeroASCII(char *buffer, int maxChars, const char *color, int prin
 
             else if ((unsigned char)c == 27) { // ESC
                 controlarCursor(0);
+                printf(RESET);
                 return KC_ESC;
             }
 
@@ -570,6 +578,7 @@ KeyCode inputNumeroASCII(char *buffer, int maxChars, const char *color, int prin
             else if ((unsigned char)c == 27) { // ESC
                 tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
                 controlarCursor(0);
+                printf(RESET);
                 return KC_ESC;
             }
 
@@ -592,6 +601,54 @@ KeyCode inputNumeroASCII(char *buffer, int maxChars, const char *color, int prin
     return 0; // deu tudo certo
 }
 
+/// @brief funcao para quebrar descricao em varias linhas
+/// @param texto /// descricao original
+/// @param destino /// matriz onde sera salvo o texto quebrado
+/// @return  /// quantas linhas foram usadas
+int quebrarDescricao(const char *texto, char destino[7][50]) {
+    int linha = 0;
+    const char *p = texto;
+
+    while (*p && linha < 7) {
+        int col = 0;
+        int lastSpace = -1;
+
+        while (*p && *p != '\n' && col < 49) {
+            destino[linha][col] = *p;
+
+            if (*p == ' ')
+                lastSpace = col; // marca último espaço antes de encher a linha
+
+            p++;
+            col++;
+        }
+
+        
+        if (*p && *p != ' ' && col >= 49 && lastSpace != -1) {
+            // volta o ponteiro até o último espaço
+            int retroceder = col - lastSpace - 1;
+            p -= retroceder; // volta no texto original
+            col = lastSpace; // corta a linha ali
+        }
+
+        // finaliza a linha
+        destino[linha][col] = '\0';
+        linha++;
+
+        // pular o \n se tiver
+        if (*p == '\n') p++;
+
+        // pula espaço inicial da próxima linha, se houver
+        if (*p == ' ') p++;
+    }
+    int rLinha = linha;
+    
+    // Garante que as linhas restantes fiquem vazias
+    for (; linha < 7; linha++)
+        destino[linha][0] = '\0';
+    return rLinha;
+}
+
 // funcao para atualizar apenas uma opcao do menu
 void updateOption(int linha, const char* texto, const char* fundo, const char* cor) {
     printf("\033[%d;1H\033[K", linha); // move para linha e coluna 1 e limpa a linha
@@ -599,7 +656,50 @@ void updateOption(int linha, const char* texto, const char* fundo, const char* c
     fflush(stdout);
 }
 
-// funcao para inicializar todas as estruturas
+/// @brief Cria um chamado e adiciona na fila correta
+/// @param c O chamado a ser criado
+void criarChamado(chamado c){
+    // funcao para criar um chamado e adicionar na fila de prioridade
+    if(c.prioridade <= 0){
+        fila* fNormal = estruturasGlobais.filaNormal;
+        filaInserir(fNormal, c);
+    }else{
+        filaPrioridade* fp = estruturasGlobais.filaPrioridade;
+        filaPrioridadeInserir(fp, c);
+    }
+}
+
+/// @brief  Função para atender um chamado
+void atenderChamado(void){
+   chamado c;
+    if(estruturasGlobais.filaPrioridade->n > 0)
+        c = filaPrioridadeRemover(estruturasGlobais.filaPrioridade);
+    else{
+        c = filaRetirar(estruturasGlobais.filaNormal);
+    }
+    filaInserir(estruturasGlobais.filaAndamento, c);
+}
+
+/// @brief  Função para concluir um chamado
+/// @param indice O índice do chamado a ser concluído
+void concluirChamado(int indice){
+    fila* fAndamento = estruturasGlobais.filaAndamento;
+    chamado c = filaRetirarIndice(fAndamento, indice);
+    insereFilaDupla(estruturasGlobais.filadupla, 0, c);
+}
+
+/// @brief deletar um chamado concluido
+/// @param indice O índice do chamado a ser deletado
+void deletarChamado(int indice, int todos){
+    if(todos){
+        esvaziarFilaDupla(estruturasGlobais.filadupla);
+    }else{
+        filaDupla* fd = estruturasGlobais.filadupla;
+        chamado c = removerFilaDupla(fd, indice);
+    }
+}
+
+/// @brief Inicializa as estruturas globais do sistema 
 void initEstruturas(void){
     
     estruturasGlobais.pil = criarPilha();

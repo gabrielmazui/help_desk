@@ -35,7 +35,6 @@ void desenharPrimeiroMenu(void){
         
 }
 int main(){
-    
     // esconde o cursor de texto
     controlarCursor(0);
     clear();
@@ -45,9 +44,10 @@ int main(){
         clear();
         terminalPequenoAlertado = 0;
     }
-    desenharPrimeiroMenu();
+    
     while(1){
-        // loop que vai ficar lendo as setas para cima e para baixo ate receber enter
+        clear();
+        desenharPrimeiroMenu();
         while(1){
             KeyCode teclaEscolhida = userGetKey();
             if(teclaEscolhida == RESIZE_EVENT){

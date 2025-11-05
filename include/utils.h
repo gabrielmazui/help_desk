@@ -69,6 +69,24 @@ KeyCode inputNumeroASCII(char *buffer, int maxChars, const char *color, int prin
 // vai mudar o conteudo de determinada linha
 void updateOption(int linha, const char* texto, const char* fundo, const char* cor);
 
+// funcao para quebrar descricao em varias linhas
+// texto -> descricao original
+// destino -> matriz onde sera salvo o texto quebrado
+// retorna quantas linhas foram usadas
+int quebrarDescricao(const char *texto, char destino[7][50]);
+
+// criar um chamado e adicionar na fila correta
+void criarChamado(chamado c);
+
+// funcao para atender chamado
+void atenderChamado(void);
+
+// funcao para concluir chamado
+void concluirChamado(int indice);
+
+// funcao para deletar chamado fechado
+void deletarChamado(int indice, int todos);
+
 // funcao para inicilar as estruturas
 void initEstruturas(void);
 

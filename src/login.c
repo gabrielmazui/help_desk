@@ -59,6 +59,7 @@ void login(int codigoErro){
     while(1){
         KeyCode k = inputASCII(holderUsr, 40, GREEN, mostrarBuffer); // ler input
         if(k == KC_ESC){
+            controlarCursor(0);
             clear();
             return;
         }else if(k == RESIZE_EVENT){
@@ -96,6 +97,7 @@ void login(int codigoErro){
         if(k2 == KC_ESC){
             // se for pressionado o esc retorna para o primeiro menu
             clear();
+            controlarCursor(0);
             return;
         }else if(k2 == RESIZE_EVENT){
             esperar_tamanho_minimo(10, 60);
