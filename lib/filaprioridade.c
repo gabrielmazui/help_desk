@@ -2,47 +2,40 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "menufunctions.h"
-#include "filaprioridade.h"
+#include "all.h"
 
-// 1 se a > b , 0 caso contrario
-static int comparar(chamado a, chamado b){
-    if(a.prioridade > b.prioridade || (a.prioridade == b.prioridade && a.tempoSimples < b.tempoSimples)){
-        return 1;
-    }
-    return 0;
-}
-
-// criar fila de prioridade
-filaPrioridade * criarFilaPrioridade(void){
+/// @brief Cria uma nova fila de prioridade.
+/// @param comparar Função de comparação para ordenar os elementos.
+/// @return Ponteiro para a nova fila de prioridade.
+filaPrioridade * criarFilaPrioridade(int (*comparar)(void* a, void* b)){
     filaPrioridade * f = (filaPrioridade *)malloc(sizeof(filaPrioridade));
     if(f == NULL){
-        // log
         exit(1);
     }
     f->n = 0;
     f->dim = 10; // tamanho inicial
-    f->elementos = (chamado*)malloc(f->dim * sizeof(chamado));
+    f->elementos = malloc(f->dim * sizeof(void*));
+    f->comparar = comparar;
     if(f->elementos == NULL){
-        // log
         exit(1);
     }
     return f;
 }
 
-// inserir na fila de prioridade
-void filaPrioridadeInserir(filaPrioridade* f, chamado c){
+/// @brief Insere um elemento na fila de prioridade.
+/// @param f Ponteiro para a fila de prioridade.
+/// @param d Ponteiro para o dado a ser inserido.
+void filaPrioridadeInserir(filaPrioridade* f, void* d){
     if(f->n >= f->dim){
         // realocar memoria
         f->dim *= 2;
-        f->elementos = (chamado*)realloc(f->elementos, f->dim * sizeof(chamado));
+        f->elementos = realloc(f->elementos, f->dim * sizeof(void*));
         if(f->elementos == NULL){
-            // log
             exit(1);
         }
     }
 
-    f->elementos[f->n] = c; // coloca o chamado no final
+    f->elementos[f->n] = d; // coloca o chamado no final
     f->n++;
     int j = f->n - 1;          // posição onde ele vai entrar
 
@@ -51,11 +44,11 @@ void filaPrioridadeInserir(filaPrioridade* f, chamado c){
     while (j > 0) {
         int i = (j - 1) / 2; // pai de j
 
-        chamado pai = f->elementos[i];
-        chamado filho = f->elementos[j];
+        void* pai = f->elementos[i];
+        void* filho = f->elementos[j];
 
         // Se o filho tem prioridade maior (ou mesmo nível, mas é mais antigo), troca
-        if (comparar(filho, pai) == 1) {
+        if (f->comparar(filho, pai) == 1) {
             f->elementos[i] = filho;
             f->elementos[j] = pai;
             j = i; // sobe o filho
@@ -66,13 +59,13 @@ void filaPrioridadeInserir(filaPrioridade* f, chamado c){
 }
 
 // remover da fila de prioridade
-chamado filaPrioridadeRemover(filaPrioridade* f) {
+void* filaPrioridadeRemover(filaPrioridade* f) {
     if(f->n == 0){
         // log
         exit(1);
     }
 
-    chamado removido = f->elementos[0];
+    void* removido = f->elementos[0];
     f->n--;
     f->elementos[0] = f->elementos[f->n]; // mover último elemento para a raiz
 
@@ -83,22 +76,22 @@ chamado filaPrioridadeRemover(filaPrioridade* f) {
         int direita = 2 * j + 2;
         int maior = j;
 
-        if (esquerda < f->n && comparar(f->elementos[esquerda], f->elementos[maior]))
+        if (esquerda < f->n && f->comparar(f->elementos[esquerda], f->elementos[maior]))
             maior = esquerda;
-        if (direita < f->n && comparar(f->elementos[direita], f->elementos[maior]))
+        if (direita < f->n && f->comparar(f->elementos[direita], f->elementos[maior]))
             maior = direita;
 
         if (maior == j) // nenhum filho maior, para o loop
             break;
 
         // troca pai com filho maior
-        chamado temp = f->elementos[j];
+        void* temp = f->elementos[j];
         f->elementos[j] = f->elementos[maior];
         f->elementos[maior] = temp;
 
         j = maior; // desce para o próximo nível
     }
-
+    
     return removido;
 }
 
@@ -110,7 +103,8 @@ filaPrioridade* filaPrioridadeCopiar(filaPrioridade* original) {
 
     copia->n = original->n;
     copia->dim = original->dim;
-    copia->elementos = (chamado*)malloc(copia->dim * sizeof(chamado));
+    copia->elementos = malloc(copia->dim * sizeof(void*));
+    copia->comparar = original->comparar;
     if (!copia->elementos) exit(1);
 
     // copia todos os elementos
@@ -123,6 +117,9 @@ filaPrioridade* filaPrioridadeCopiar(filaPrioridade* original) {
 
 void filaPrioridadeLiberar(filaPrioridade** f){
     if(f != NULL && *f != NULL){
+        for(int i = 0; i < (*f)->n; i++){
+            free((*f)->elementos[i]);
+        }
         free((*f)->elementos);
         free(*f);
         *f = NULL;

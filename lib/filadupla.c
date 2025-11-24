@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "menufunctions.h"
-#include "filadupla.h"
+#include "all.h"
 
 /// @brief Cria uma fila dupla
 /// @return Ponteiro para a fila dupla criada
@@ -21,8 +20,8 @@ filaDupla* criarFilaDupla(void){
 /// @brief Insere um elemento na fila dupla
 /// @param f Ponteiro para a fila dupla
 /// @param pos Posição onde o elemento deve ser inserido
-/// @param cham chamado a ser inserido
-void insereFilaDupla(filaDupla* f, int pos, chamado cham){
+/// @param dado item a ser inserido
+void filaDuplaInserir(filaDupla* f, int pos, void* dado){
     if(f == NULL || pos < 0 || pos > f->n){
         // log
         exit(1);
@@ -32,7 +31,7 @@ void insereFilaDupla(filaDupla* f, int pos, chamado cham){
         // log
         exit(1);
     }
-    novoNo->chamado = cham;
+    novoNo->dado = dado;
     novoNo->prox = NULL;
     novoNo->ant = NULL;
 
@@ -68,31 +67,31 @@ void insereFilaDupla(filaDupla* f, int pos, chamado cham){
 /// @brief  Remove um elemento da fila dupla
 /// @param f f Ponteiro para a fila dupla
 /// @param pos indice do elemento a ser removido (comeca no 0)
-/// @return Chamado removido
-chamado removerFilaDupla(filaDupla* f, int pos){
+/// @return item removido
+void* filaDuplaRemover(filaDupla* f, int pos){
     if(f == NULL || f->n == 0 || pos < 0 || pos >= f->n){
         // log
         exit(1);
     }
     noDuplo* removido;
-    chamado chamRemovido;
+    void* dadoRemovido = NULL;
 
     if(f->n == 1){
         // remover unico elemento
         removido = f->inicio;
-        chamRemovido = removido->chamado;
+        dadoRemovido = removido->dado;
         f->inicio = NULL;
         f->fim = NULL;
     }else if(pos == 0){
         // remover do inicio
         removido = f->inicio;
-        chamRemovido = removido->chamado;
+        dadoRemovido = removido->dado;
         f->inicio = f->inicio->prox;
         f->inicio->ant = NULL;
     }else if(pos == f->n - 1){
         // remover do fim
         removido = f->fim;
-        chamRemovido = removido->chamado;
+        dadoRemovido = removido->dado;
         f->fim = f->fim->ant;
         f->fim->prox = NULL;
     }else{
@@ -102,18 +101,18 @@ chamado removerFilaDupla(filaDupla* f, int pos){
             atual = atual->prox;
         }
         removido = atual;
-        chamRemovido = removido->chamado;
+        dadoRemovido = removido->dado;
         atual->ant->prox = atual->prox;
         atual->prox->ant = atual->ant;
     }
     free(removido);
     f->n--;
-    return chamRemovido;
+    return dadoRemovido;
 }
 
 /// @brief Esvazia a fila duplamente encadeada
 /// @param f Ponteiro para a fila duplamente encadeada
-void esvaziarFilaDupla(filaDupla* f){
+void filaDuplaEsvaziar(filaDupla* f){
     if(f == NULL || f->n == 0){
         // log
         exit(1);
@@ -131,7 +130,7 @@ void esvaziarFilaDupla(filaDupla* f){
 
 /// @brief Libera a memória ocupada pela fila dupla
 /// @param f Ponteiro duplo para a fila dupla
-void liberarFilaDupla(filaDupla** f){
+void filaDuplaLiberar(filaDupla** f){
     if(f == NULL || *f == NULL){
         return;
     }
@@ -139,6 +138,7 @@ void liberarFilaDupla(filaDupla** f){
     while(atual != NULL){
         noDuplo* temp = atual;
         atual = atual->prox;
+        free(temp->dado);
         free(temp);
     }
     free(*f);

@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "menufunctions.h"
-#include "fila.h"
+#include "all.h"
 
 /// @brief Cria uma fila
 /// @return Ponteiro para a fila criada
@@ -20,15 +19,15 @@ fila * criarFila(void){
 
 /// @brief Insere um elemento na fila
 /// @param f Ponteiro para a fila
-/// @param m Chamado a ser inserido
-void filaInserir(fila * f, chamado m){
+/// @param m item a ser inserido
+void filaInserir(fila * f, void* m){
     if(f == NULL){
         //log
         exit(1);
     }
     noFila* no = (noFila*)malloc(sizeof(noFila));
     no->prox = NULL;
-    no->chamado = m;
+    no->dado = m;
     if(f->first == NULL){
         f->first = no;
     }else{
@@ -40,15 +39,15 @@ void filaInserir(fila * f, chamado m){
 
 /// @brief Remove um elemento da fila
 /// @param f Ponteiro para a fila
-/// @return Chamado removido
-chamado filaRetirar(fila * f){
+/// @return item removido
+void* filaRetirar(fila * f){
     if(f->first == NULL){
         // fila vazia 
         //log
         exit(1);
     }
     noFila* temp = f->first;
-    chamado v = temp->chamado;
+    void* v = temp->dado;
     f->first = f->first->prox;
     if(f->first == NULL){
         f->last = NULL;
@@ -62,8 +61,8 @@ chamado filaRetirar(fila * f){
 /// @brief Remove um elemento da fila pelo indice
 /// @param f Ponteiro para a fila
 /// @param indice Indice do elemento a ser removido
-/// @return Chamado removido
-chamado filaRetirarIndice(fila * f, int indice){
+/// @return item removido
+void* filaRetirarIndice(fila * f, int indice){
     if(f->first == NULL){
         // fila vazia 
         //log
@@ -91,7 +90,7 @@ chamado filaRetirarIndice(fila * f, int indice){
     if(atual == f->last){
         f->last = anterior;
     }
-    chamado c = atual->chamado;
+    void* c = atual->dado;
     free(atual);
     f->n--;
     return c;
@@ -103,6 +102,7 @@ void filaLiberar(fila ** f){
     noFila * no = (*f)->first;
     while(no != NULL){
         noFila* temp = no->prox;
+        free(no->dado);
         free(no);
         no = temp;
     }

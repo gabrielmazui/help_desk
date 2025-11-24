@@ -7,11 +7,7 @@
 #include <stdio.h>
 #include <locale.h>
 
-#include "menu.h"
-#include "colors.h"
-#include "utils.h"
-#include "login.h"
-#include "terminal_utils.h"
+#include "all.h"
 
 // funcao para ficar reescrevendo as opcoes conforme o selecionado
 void updateMenuSelection(int selected){
