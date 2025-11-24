@@ -93,7 +93,7 @@ static void printarBufferMateriais(char **buffer, int paginas, int paginaAtual, 
     printf("\n");
     repetirChar(43, '-', BLUE);
     // 7 linhas de header por pagina
-    printf("\n");
+    printf("\n\n\n"); // + 2 linhas de espaço
 
     for(int i = 0; i < quantOptions[paginaAtual - 1]; i++){
         if(selected == i + 3){
@@ -104,7 +104,10 @@ static void printarBufferMateriais(char **buffer, int paginas, int paginaAtual, 
         printf("\n");
     }
     // no max 10 linhas por pagina de materiais
-    printf("\n\n");
+    int q = 24 - quantOptions[paginaAtual - 1] - 9;
+    for(int i = 0; i < q; i++){
+        printf("\n");
+    }
     if(selected ==  3 + quantOptions[paginaAtual - 1]){
         printf(" %s< Pagina %d/%d >"RESET, BG_BLUE, paginaAtual, paginas);
     }else{
@@ -328,7 +331,7 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
     carregarBufferMateriais(&buffer, &paginas, &quantOptions);
     int paginaAtual = 1;
     printarBufferMateriais(buffer, paginas, paginaAtual, selected, quantOptions);
-
+    char* options[2] = {"Material necessario nao esta na lista", "Concluir"};
     while(1){
         KeyCode k = userGetKey();
         if(k == RESIZE_EVENT){
@@ -340,35 +343,74 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
             }
             continue;
         }else if(k == KC_ESC){
-            menuCriarChamadoHandler(prioridade, comPreferencia, titulo, descricao, 1);
+            menuCriarChamadoHandler(prioridade, comPreferencia, titulo, descricao, 2);
             return;
-        }else if(KC_UP){
-            if(selected > 1){
-                if(selected == quantOptions[paginaAtual - 1] + 3){
-                    // estava na opcao de mudar pagina
-                    char txt[100];
-                    snprintf(txt, sizeof(txt), "< Pagina %d/%d >", paginaAtual, paginas);
-                    updateOption(35, txt, "", BLUE);
-                }else{
-                    updateOption(selected + 4, buffer[(selected - 1) + (paginaAtual*10)], "", BLUE);
-                }
+        }if(k == KC_UP && selected > 1){
+            if(selected == 2){
+                updateOption(5, options[1], "", BLUE);
                 selected--;
-                updateOption(selected + 4, buffer[(selected - 1) + (paginaAtual*10)], BG_BLUE, "");
-            }
-        }else if(KC_DOWN){
-            if(selected < quantOptions[paginaAtual - 1] + 3){
-                updateOption(selected + 4, buffer[(selected - 1) + (paginaAtual*10)], "", BLUE);
-                selected++;
-                if(selected + 1 > quantOptions[(paginaAtual - 1)] + 3){
+                updateOption(4, options[0], BG_BLUE, "");
+            }else if(selected == 3){
+                if(quantOptions[paginaAtual - 1] > 0){
+                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
+                    selected--;
+                    updateOption(5, options[1], BG_BLUE, "");
+                }else{
+            
                     char txt[100];
                     snprintf(txt, sizeof(txt), "< Pagina %d/%d >", paginaAtual, paginas);
-                    updateOption(35, txt, BG_BLUE, "");
-
-                }else{
-                    updateOption(selected + 4, buffer[(selected - 1) + (paginaAtual*10)], BG_BLUE, "");
+                    updateOption(25, txt, "", BLUE);
+                    selected--;
+                    updateOption(5, options[1], BG_BLUE, "");
                 }
-
+            }else{
+                if(selected == quantOptions[paginaAtual - 1] + 3){
+                    char txt[100];
+                    snprintf(txt, sizeof(txt), "< Pagina %d/%d >", paginaAtual, paginas);
+                    updateOption(25, txt, "", BLUE);
+                    selected--;
+                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
+                }else{
+                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
+                    selected--;
+                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], BG_BLUE, "");
+                }
             }
+        }
+        else if(k == KC_DOWN && selected < quantOptions[paginaAtual - 1] + 3){
+            if(selected == 1){
+                updateOption(4, options[0], "", BLUE);
+                selected++; // desce
+                // Coloca destaque na nova opção
+                updateOption(5, options[1], BG_BLUE, "");
+            }else if(selected == 2){
+                if(quantOptions[paginaAtual - 1] > 0){
+
+                    updateOption(5, options[1], "", BLUE);
+                    selected++; // desce
+                    // Coloca destaque na nova opção
+                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], BG_BLUE, "");
+                }else{
+                    updateOption(5, options[1], "", BLUE);
+                    selected++;
+                    char txt[100];
+                    snprintf(txt, sizeof(txt), "< Pagina %d/%d >", paginaAtual, paginas);
+                    updateOption(25, txt, BG_BLUE, "");
+                }
+            }else{
+                if(selected == quantOptions[paginaAtual - 1] + 2){
+                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
+                    selected++;
+                    char txt[100];
+                    snprintf(txt, sizeof(txt), "< Pagina %d/%d >", paginaAtual, paginas);
+                    updateOption(25, txt, BG_BLUE, "");
+                }else{
+                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
+                    selected++;
+                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], BG_BLUE, "");
+                }
+            }
+            
         }else if(k == KC_LEFT){
             if(selected == quantOptions[paginaAtual - 1] + 3){
                 // mudar pagina para a esquerda
@@ -386,7 +428,7 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                     if(quantidade > 0){
                         quantidade--;
                         snprintf(buffer[selected - 3 + (paginaAtual -1)*10], 60, "%s < %d >", nome, quantidade);
-                        updateOption(selected + 4, buffer[selected - 3 + (paginaAtual -1)*10], BG_BLUE, "");
+                        updateOption(selected + 7, buffer[selected - 3 + (paginaAtual -1)*10], BG_BLUE, "");
                     }
                 }
             }
@@ -407,13 +449,19 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                     if(quantidade < 10){
                         quantidade++;
                         snprintf(buffer[selected - 3 + (paginaAtual -1)*10], 60, "%s < %d >", nome, quantidade);
-                        updateOption(selected + 4, buffer[selected - 3 + (paginaAtual -1)*10], BG_BLUE, "");
+                        updateOption(selected + 7, buffer[selected - 3 + (paginaAtual -1)*10], BG_BLUE, "");
                     }
                 }
             }
         }else if(k == KC_ENTER){
             if(selected == 1){
                 menuExtraItemEstoque();
+                free(quantOptions);
+                for(int i = 0; i < paginas; i++){
+                    free(buffer[i]);
+                }
+                free(buffer);
+                carregarBufferMateriais(&buffer, &paginas, &quantOptions);
                 printarBufferMateriais(buffer, paginas, paginaAtual, selected, quantOptions);
                 continue;
             }else if(selected == 2){
