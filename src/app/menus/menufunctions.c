@@ -234,6 +234,7 @@ menuHandler* createMenu(int type){
             menuReturn->funcaoExtra = conteudoExtra;
             break;
         case 14:
+        // REPOR POR ALGUMA COISA
             // concluir chamado em andamento
             *menuReturn = (menuHandler){0};
             menuReturn->type = 14;
@@ -284,7 +285,7 @@ menuHandler* createMenu(int type){
             menuReturn->funcaoExtra = NULL;
             break;
         case 18:
-            // deletar chamado fechado (tem chamados fechados)
+            // REPOR POR ALGUMA COISA
             *menuReturn = (menuHandler){0};
             menuReturn->type = 18;
             strcpy(menuReturn->titulo, "");
@@ -355,16 +356,6 @@ menuHandler* createMenu(int type){
     return menuReturn;
 }
 
-// funcao para esc
-void menuHandlerEsc(int type, pilha* p){
-    if(type == 1){
-        menuHandler* mSair = createMenu(9);
-        pushPilha(p, mSair);
-    }else{
-        popPilha(p);
-    }
-}
-
 // handler para selecionar as opcoes do menu
 void handlerMenuSelect(int type, int selected, pilha **p){
     menuHandler* m;
@@ -410,7 +401,7 @@ void handlerMenuSelect(int type, int selected, pilha **p){
                         pushPilha(*p, m);
                         break;
                 }
-                break;
+                    break;
                 // tecnico
                 case 2:
                     switch(selected){
@@ -445,6 +436,7 @@ void handlerMenuSelect(int type, int selected, pilha **p){
                         pushPilha(*p, m);
                         break;
                     }
+                    break;
                 case 3:
                 case 4:
                 case 5:
@@ -573,7 +565,7 @@ void handlerMenuSelect(int type, int selected, pilha **p){
             switch(selected){
                 case 1:
                     pilhaLiberar(p);
-                    // animacao de sair
+                    *p = NULL;
                     return;
                 case 2:
                     // tira o menu sair do topo da pilha

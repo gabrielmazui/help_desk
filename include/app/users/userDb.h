@@ -1,11 +1,11 @@
-#ifndef USER_H
-#define USER_H
+#ifndef USERDB_H
+#define USERDB_H
 
 typedef struct Tempo Tempo;
 typedef struct fila fila;
 
 typedef struct User {
-    char usuario[50];
+    char usuario[35];
     char senha[50];
     int tipo;
     /*
@@ -17,7 +17,8 @@ typedef struct User {
      */
     Tempo criacao;
     int id;
-    fila* filaChamados;
+    fila* filaChamados; // definido na hora de carregar os chamados
+    int Qchamados; // definido na hora de carregar os chamados
 } User;
 
 // ----------------------
@@ -37,5 +38,7 @@ void adicionarUsuarioTXT(const User* u);
 
 // Deleta um usuário do arquivo TXT pelo nome
 void deletarUsuarioTXT(const char* usuarioNome);
+
+void carregarAtendentesTXT(void);
 
 #endif // USER_H

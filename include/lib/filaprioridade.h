@@ -8,10 +8,11 @@ typedef struct filaPrioridade{
     int dim;
     void** elementos;
     int (*comparar)(void* a, void* b);
+    void (*liberar)(void* d);
 } filaPrioridade;
 
 // criar fila de prioridade
-filaPrioridade * criarFilaPrioridade(int (*comparar)(void* a, void* b));
+filaPrioridade * criarFilaPrioridade(int (*comparar)(void* a, void* b), void (*liberar)(void* d));
 
 // inserir na fila de prioridade
 void filaPrioridadeInserir(filaPrioridade* f, void* d);

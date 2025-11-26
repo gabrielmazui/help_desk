@@ -13,11 +13,11 @@ typedef struct filaDupla{
     noDuplo* inicio;
     noDuplo* fim;
     int n;
+    void (*liberar)(void* d);
 } filaDupla;
 
 // funcao criar fila duplamente encadeada
-filaDupla* criarFilaDupla(void);
-
+filaDupla* criarFilaDupla(void (*liberar)(void* d));
 // funcao inserir na fila duplamente encadeada
 void filaDuplaInserir(filaDupla* f, int pos, void* dado);
 

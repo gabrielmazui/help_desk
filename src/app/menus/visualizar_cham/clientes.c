@@ -69,6 +69,13 @@ static void copiarPorUsuario(fila ** f, filaPrioridade ** fp, filaDupla ** fd, f
     }
 }
 
+
+static void limparChamados(void* a){
+    free(((chamado*)a)->quantMateriaisPorItem);
+    filaLiberar(&((chamado*)a)->materiais);
+    free(a);
+}
+
 /// @brief Carrega os buffers de chamados para exibição
 /// @param buf1 buffer de chamados abertos
 /// @param buf2 buffer de chamados em andamento
@@ -82,10 +89,10 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     
     
     
-    fila* f = criarFila();
-    filaPrioridade* fp = criarFilaPrioridade(estruturasGlobais.chamadosAbertosComPrioridade->comparar);
-    filaDupla* fd = criarFilaDupla();
-    filaDupla* fAndamento = criarFilaDupla();
+    fila* f = criarFila(limparChamados);
+    filaPrioridade* fp = criarFilaPrioridade(estruturasGlobais.chamadosAbertosComPrioridade->comparar, limparChamados);
+    filaDupla* fd = criarFilaDupla(limparChamados);
+    filaDupla* fAndamento = criarFilaDupla(limparChamados);
     copiarPorUsuario(&f, &fp, &fd, &fAndamento);
 
     noFila *atualFilaAberto = f ? f->first : NULL;
@@ -141,7 +148,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
         }
 
     }
-
+    
     // ----------- Andamento -----------
     {
         int index = 0;
@@ -173,7 +180,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             atual = atual->prox;
         }
     }
-
+    
     // define as quantidades totais de linhas com base real
     *linhasAberto = totalLinhasAberto;
     *linhasAndamento = totalLinhasAndamento;
@@ -624,7 +631,6 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             linhasNaPagina = linhasPorChamadoFechado[i];
         }
     }
-
     // ---------- COMPLETAR PÁGINAS VAZIAS ----------
     for (int i = paginasAberto; i <= *totalPaginas; i++)
         (*divisaoLinhas)[0][i] = *linhasAberto;
@@ -635,17 +641,35 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     for (int i = paginasFechado; i <= *totalPaginas; i++)
         (*divisaoLinhas)[2][i] = *linhasFechado;
 
-    
-
     // ===================== LIBERAR VETORES TEMPORÁRIOS =====================
     free(linhasPorChamadoAberto);
     free(linhasPorChamadoAndamento);
     free(linhasPorChamadoFechado);
     free(vetPrioridadeTemp);
-    filaLiberar(&f);
-    filaPrioridadeLiberar(&fp);
-    filaDuplaLiberar(&fd);
-    filaDuplaLiberar(&fAndamento);
+    
+    noFila *atual = f ? f->first : NULL;
+    while (atual) {
+        noFila *temp = atual;
+        atual = atual->prox;
+        free(temp);
+    }
+    free(f);
+    free(fp->elementos);
+    free(fp);
+    noDuplo *atualD = fd ? fd->inicio : NULL;
+    while (atualD) {
+        noDuplo *temp = atualD;
+        atualD = atualD->prox;
+        free(temp);
+    }
+    free(fd);
+    atualD = fAndamento ? fAndamento->inicio : NULL;
+    while (atualD) {
+        noDuplo *temp = atualD;
+        atualD = atualD->prox;
+        free(temp);
+    }
+    free(fAndamento);
 }
 
 
@@ -919,7 +943,8 @@ void clientesChamados(void){
             }
             continue;
         }else if(k == KC_ESC){
-            popPilha(estruturasGlobais.pil);
+            menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+            free(temp); // tira o menu de atender chamado
             break;
         }
         if(paginaAtual == 1){
@@ -968,7 +993,8 @@ void clientesChamados(void){
             }else if(k == KC_ENTER && selected < 3){
                 if(selected == 1){
                     // voltar
-                    popPilha(estruturasGlobais.pil);
+                    menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+                    free(temp); // tira o menu de atender chamado
                     break;
                 }else if(selected == 2){
                     // sair

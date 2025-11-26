@@ -1,200 +1,219 @@
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <string.h>
+#include <time.h>
 #include "all.h"
 
-#define CHAMADOS_FILE1 "../db/ca1.json"
-#define CHAMADOS_FILE2 "../db/ca2.json"
-#define CHAMADOS_FILE3 "../db/cAnd.json"
-#define CHAMADOS_FILE4 "../db/cf.json"
-#define CHAMADOS_FILE5 "../db/cs.json"
+#define CHAMADO1_FILE "../db/ca1.txt"
+#define CHAMADO2_FILE "../db/ca2.txt"
+#define CHAMADO3_FILE "../db/cAnd.txt"
+#define CHAMADO4_FILE "../db/cf.txt"
+#define CHAMADO5_FILE "../db/cs.txt"
 
-
-static char* fileType(int type) {
-    char *f;
-    switch (type){
-    case 1:
-        f = CHAMADOS_FILE1;
-        break;
-    case 2:
-        f = CHAMADOS_FILE2;
-        break;
-    case 3:
-        f = CHAMADOS_FILE3;
-        break;
-    case 4:
-        f = CHAMADOS_FILE4;
-        break;
-    case 5:
-        f = CHAMADOS_FILE5;
-        break;
+static void criarArquivoChamados(int type) {
+    char file_name[50];
+    switch(type){
+        case 1: strcpy(file_name, CHAMADO1_FILE); break;
+        case 2: strcpy(file_name, CHAMADO2_FILE); break;
+        case 3: strcpy(file_name, CHAMADO3_FILE); break;
+        case 4: strcpy(file_name, CHAMADO4_FILE); break;
+        case 5: strcpy(file_name, CHAMADO5_FILE); break;
     }
-    return f;
-}
-
-// Cria o arquivo JSON de usuários se ele não existir
-static void criarArquivoJSON(int type) {
-    char *f = fileType(type);
-    FILE* fp = fopen(f, "w");
+    FILE *fp = fopen(file_name, "a");
     if (!fp) {
-        printf("Erro ao criar o arquivo %s\n", f);
+        printf("Erro ao criar arquivo de chamados!\n");
         exit(1);
     }
-    fprintf(fp, "[]\n"); // JSON vazio
     fclose(fp);
 }
 
-// Remove espaços no início de uma string
-static char* trim(char* str) {
-    while (*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r') str++;
-    return str;
+static void limparItems(void* a){
+    free(a);
 }
 
-
-// Carrega um usuário do arquivo JSON
-void carregarChamadosJSON(int type, void(*funcaoAdicionar)(chamado * c)) {
-    char * f = fileType(type);
-    FILE* fp = fopen(f, "r");
+void carregarChamados(int type){
+    char file_name[50];
+    switch(type){
+        case 1: strcpy(file_name, CHAMADO1_FILE); break;
+        case 2: strcpy(file_name, CHAMADO2_FILE); break;
+        case 3: strcpy(file_name, CHAMADO3_FILE); break;
+        case 4: strcpy(file_name, CHAMADO4_FILE); break;
+        case 5: strcpy(file_name, CHAMADO5_FILE); break;
+    }
+    FILE *fp = fopen(file_name, "r");
     if (!fp) {
-        criarArquivoJSON(type);
-        fp = fopen(f, "r");
-        if (!fp) return 0;
+        criarArquivoChamados(type);
+        return;
     }
 
-    char linha[1024];
-    int encontrado = 0;
+    while (1) {
+        chamado *c = malloc(sizeof(chamado));
+        if (!c) { printf("Erro de alocacao de memoria para chamado\n"); exit(1); }
 
-    while (fgets(linha, sizeof(linha), fp)) {
-        char* l = trim(linha);
+        if (fscanf(fp, "%d\n", &c->id) != 1) {
+            free(c);
+            break;
+        }
 
-        char usuarioArquivo[50], senhaArquivo[50];
-        int tipo, idArquivo;
-        int dia, mes, ano, horas, minutos, segundos;
-        chamado * c = malloc(sizeof(chamado));
-        sscanf(l,
-            "{\"id\":\"%d\",\"titulo\":\"%59[^\"]\",\"descricao\":%349[^\"]\",\"prioridade\":%d,\"tempoSimples\":%ld,",
-            "\"criador\":\"%49[^\"]\",\"atendente\":\"%49[^\"]\",",
-            "\"criacao\":{\"dia\":%d,\"mes\":%d,\"ano\":%d,\"horas\":%d,\"minutos\":%d,\"segundos\":%d}}\n]",
-            c->id, c->titulo, c->descricao, c->prioridade, c->tempoSimples,
-            c->criador, c->atendente,
-            c->tempoComplexo.dia, c->tempoComplexo.mes, c->tempoComplexo.ano,
-            c->tempoComplexo.horas, c->tempoComplexo.minutos, c->tempoComplexo.segundos);
-        funcaoAdicionar(c);
-    }
-    fclose(fp);
-}
+        fgets(c->titulo, sizeof(c->titulo), fp);
+        c->titulo[strcspn(c->titulo, "\n")] = 0;
 
-// Adiciona um novo usuário ao arquivo JSON
-void adicionarChamadoJSON(int type, chamado * c) {
-    char * f = fileType(type);
-    FILE* fp = fopen(f, "r");
-    if (!fp) {
-        criarArquivoJSON(type);
-        fp = fopen(f, "r");
-        if (!fp) {
-            printf("Erro ao abrir o arquivo %s\n", f);
-            exit(1);
+        fgets(c->descricao, sizeof(c->descricao), fp);
+        c->descricao[strcspn(c->descricao, "\n")] = 0;
+
+        fscanf(fp, "%d\n", &c->prioridade);
+
+        fgets(c->criador, sizeof(c->criador), fp);
+        c->criador[strcspn(c->criador, "\n")] = 0;
+
+        fgets(c->atendente, sizeof(c->atendente), fp);
+        c->atendente[strcspn(c->atendente, "\n")] = 0;
+
+        fscanf(fp, "%ld\n", &c->tempoSimples);
+
+        fscanf(fp, "%d %d %d %d %d %d\n",
+            &c->tempoComplexo.dia,
+            &c->tempoComplexo.mes,
+            &c->tempoComplexo.ano,
+            &c->tempoComplexo.horas,
+            &c->tempoComplexo.minutos,
+            &c->tempoComplexo.segundos);
+
+        fscanf(fp, "%d\n", &c->quantMateriais);
+
+        c->materiais = criarFila(limparItems);
+
+        c->quantMateriaisPorItem = malloc(sizeof(int) * c->quantMateriais);
+        if (!c->quantMateriaisPorItem) exit(1);
+
+        for (int i = 0; i < c->quantMateriais; i++) {
+            char material[100];
+            fgets(material, sizeof(material), fp);
+            material[strcspn(material, "\n")] = 0;
+
+            int qnt;
+            fscanf(fp, "%d\n", &qnt);
+            c->quantMateriaisPorItem[i] = qnt;
+
+            Item *tmp = malloc(sizeof(Item));
+            strcpy(tmp->nome, material);
+            Item *buscado = arv_buscar(estruturasGlobais.estoque, tmp);
+            filaInserir(c->materiais, buscado);
+            free(tmp);
+        }
+
+        fscanf(fp, "%d\n", &c->cancelado);
+
+        char sep[10];
+        fgets(sep, sizeof(sep), fp);
+
+        switch(type){
+            case 1: filaPrioridadeInserir(estruturasGlobais.chamadosAbertosComPrioridade, c); break;
+            case 2: filaInserir(estruturasGlobais.chamadosAbertosSemPrioridade, c); break;
+            case 3: filaDuplaInserir(estruturasGlobais.chamadosAndamento, 0, c); break;
+            case 4: filaInserir(estruturasGlobais.chamadosConcluidos, c); break;
+            case 5: filaDuplaInserir(estruturasGlobais.chamadosSuspensos, 0, c); break;
         }
     }
 
-    // Lê todo o arquivo
-    fseek(fp, 0, SEEK_END);
-    long tamanho = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    char* buffer = malloc(tamanho + 1);
-    fread(buffer, 1, tamanho, fp);
-    buffer[tamanho] = '\0';
     fclose(fp);
-
-    // Remove o último ']'
-    char* p = strrchr(buffer, ']');
-    if (p) *p = '\0';
-
-    // Reabre para escrever
-    fp = fopen(f, "w");
-    fprintf(fp, "%s", buffer);
-
-    // Se não estava vazio, adiciona vírgula
-    if (tamanho > 3) fprintf(fp, ",\n");
-
-    fprintf(fp,
-        "    {\"id\":\"%d\",\"titulo\":\"%s\",\"descricao\":%s,\"prioridade\":%d,\"tempoSimples\":%ld,",
-        "\"criador\":\"%s\",\"atendente\":\"%s\",",
-        "\"criacao\":{\"dia\":%d,\"mes\":%d,\"ano\":%d,\"horas\":%d,\"minutos\":%d,\"segundos\":%d}}\n]",
-        c->id, c->titulo, c->descricao, c->prioridade, c->tempoSimples,
-        c->criador, c->atendente,
-        c->tempoComplexo.dia, c->tempoComplexo.mes, c->tempoComplexo.ano,
-        c->tempoComplexo.horas, c->tempoComplexo.minutos, c->tempoComplexo.segundos);
-    fclose(fp);
-    free(buffer);
 }
 
-static char* acharFimObjeto(char* inicio) {
-    int contador = 0;
-    char* ptr = inicio;
-
-    while (*ptr) {
-        if (*ptr == '{') contador++;
-        else if (*ptr == '}') contador--;
-
-        ptr++;
-
-        if (contador == 0)
-            break;
+void adicionarChamadoTXT(const chamado *c, int type) {
+    char file_name[50];
+    switch(type){
+        case 1: strcpy(file_name, CHAMADO1_FILE); break;
+        case 2: strcpy(file_name, CHAMADO2_FILE); break;
+        case 3: strcpy(file_name, CHAMADO3_FILE); break;
+        case 4: strcpy(file_name, CHAMADO4_FILE); break;
+        case 5: strcpy(file_name, CHAMADO5_FILE); break;
     }
 
-    return ptr; // aponta para EXATAMENTE o char depois do último '}'
+    FILE *fp = fopen(file_name, "a");
+    if (!fp) { criarArquivoChamados(type); fp = fopen(file_name, "a"); }
+
+    fprintf(fp, "%d\n", c->id);
+    fprintf(fp, "%s\n", c->titulo);
+    fprintf(fp, "%s\n", c->descricao);
+    fprintf(fp, "%d\n", c->prioridade);
+    fprintf(fp, "%s\n", c->criador);
+    fprintf(fp, "%s\n", c->atendente);
+    fprintf(fp, "%ld\n", c->tempoSimples);
+
+    fprintf(fp, "%d %d %d %d %d %d\n",
+        c->tempoComplexo.dia,
+        c->tempoComplexo.mes,
+        c->tempoComplexo.ano,
+        c->tempoComplexo.horas,
+        c->tempoComplexo.minutos,
+        c->tempoComplexo.segundos);
+
+    fprintf(fp, "%d\n", c->quantMateriais);
+
+    noFila *no = c->materiais->first;
+    for (int i = 0; i < c->quantMateriais; i++) {
+        Item *item = (Item*) no->dado;
+        fprintf(fp, "%s\n", item->nome);
+        fprintf(fp, "%d\n", c->quantMateriaisPorItem[i]);
+        no = no->prox;
+    }
+
+    fprintf(fp, "%d\n", c->cancelado);
+    fprintf(fp, "===\n");
+
+    fclose(fp);
 }
 
+void deletarChamadoTXT(int id, int type) {
+    char file_name[50];
+    switch(type){
+        case 1: strcpy(file_name, CHAMADO1_FILE); break;
+        case 2: strcpy(file_name, CHAMADO2_FILE); break;
+        case 3: strcpy(file_name, CHAMADO3_FILE); break;
+        case 4: strcpy(file_name, CHAMADO4_FILE); break;
+        case 5: strcpy(file_name, CHAMADO5_FILE); break;
+    }
 
-/// @brief Deleta um usuário do json pelo nome
-/// @param usuarioNome Nome do usuário a ser deletado
-// Deleta um usuário do arquivo JSON
-void deletarChamadoJSON(int type, int id) {
-    char * f = fileType(type);
-    FILE* fp = fopen(f, "r");
+    FILE *fp = fopen(file_name, "r");
     if (!fp) return;
 
-    fseek(fp, 0, SEEK_END);
-    long tamanho = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
+    FILE *temp = fopen("../db/temp.txt", "w");
+    if (!temp) { fclose(fp); return; }
 
-    char* buffer = malloc(tamanho + 1);
-    fread(buffer, 1, tamanho, fp);
-    buffer[tamanho] = '\0';
-    fclose(fp);
+    char linha[400];
+    int lendoChamado = 0;
+    int idLido = -1;
+    int ignorar = 0;
 
-    // Cria novo arquivo filtrando o usuário
-    fp = fopen("temp.json", "w");
-    fprintf(fp, "[\n");
+    while (fgets(linha, sizeof(linha), fp)) {
 
-    char* ptr = buffer;
-    int primeiro = 1;
-
-    while ((ptr = strstr(ptr, "{\"id\":")) != NULL) {
-        int idTemp;
-
-        if (sscanf(ptr, "{\"id\":\"%d\"", &idTemp) == 1) {
-
-            if (id == idTemp) {
-
-                if (!primeiro) fprintf(fp, ",\n");
-                char* end = acharFimObjeto(ptr);
-
-                fwrite(ptr, 1, end - ptr, fp);
-
-                primeiro = 0;
-            }
+        if (!lendoChamado) {
+            idLido = atoi(linha);
+            lendoChamado = 1;
+            ignorar = (idLido == id);
+            if (!ignorar) fprintf(temp, "%s", linha);
+            continue;
         }
 
-        ptr++; // evita loop infinito
+        if (strcmp(linha, "===\n") == 0 || strcmp(linha, "===\r\n") == 0) {
+            if (!ignorar) fprintf(temp, "===\n");
+            lendoChamado = 0;
+            continue;
+        }
+
+        if (!ignorar) fprintf(temp, "%s", linha);
     }
 
-    fprintf(fp, "\n]\n");
     fclose(fp);
-    free(buffer);
+    fclose(temp);
 
-    remove(f);
-    rename("temp.json", f);
+    remove(file_name);
+    rename("../db/temp.txt", file_name);
+}
+
+void deletarTodosChamadosTXT(void){
+    FILE *temp = fopen("../db/temp.txt", "w");
+    fclose(temp);
+    remove(CHAMADO1_FILE);
+    rename("../db/temp.txt", CHAMADO1_FILE);
 }

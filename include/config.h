@@ -30,4 +30,6 @@ extern Estruturas estruturasGlobais;
 
 void alterarVariavelConfig(int tipo, int novoValor);
 
+void initConfigs(void);
+
 #endif

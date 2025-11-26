@@ -7,7 +7,7 @@
 /// @brief Cria uma nova fila de prioridade.
 /// @param comparar Função de comparação para ordenar os elementos.
 /// @return Ponteiro para a nova fila de prioridade.
-filaPrioridade * criarFilaPrioridade(int (*comparar)(void* a, void* b)){
+filaPrioridade * criarFilaPrioridade(int (*comparar)(void* a, void* b), void (*liberar)(void* d)){
     filaPrioridade * f = (filaPrioridade *)malloc(sizeof(filaPrioridade));
     if(f == NULL){
         exit(1);
@@ -16,6 +16,7 @@ filaPrioridade * criarFilaPrioridade(int (*comparar)(void* a, void* b)){
     f->dim = 10; // tamanho inicial
     f->elementos = malloc(f->dim * sizeof(void*));
     f->comparar = comparar;
+    f->liberar = liberar;
     if(f->elementos == NULL){
         exit(1);
     }
@@ -118,7 +119,7 @@ filaPrioridade* filaPrioridadeCopiar(filaPrioridade* original) {
 void filaPrioridadeLiberar(filaPrioridade** f){
     if(f != NULL && *f != NULL){
         for(int i = 0; i < (*f)->n; i++){
-            free((*f)->elementos[i]);
+            (*f)->liberar((*f)->elementos[i]);
         }
         free((*f)->elementos);
         free(*f);

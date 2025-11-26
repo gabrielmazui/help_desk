@@ -10,9 +10,10 @@ typedef struct arvNo {
 typedef struct arvoreBinaria {
     struct arvNo* raiz;
     int (*comparar)(void* a, void* b);
+    void (*liberar)(void* d);
 } arvoreBinaria;
 
-arvoreBinaria* arv_criar(int (*comparar)(void* a, void* b));
+arvoreBinaria* arv_criar(int (*comparar)(void* a, void* b), void (*liberar)(void* d));
 
 void arv_inserir(arvoreBinaria* arv, void* dado);
 

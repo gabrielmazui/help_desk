@@ -5,10 +5,6 @@
 
 #define USUARIO_FILE "../db/users.txt"
 
-// ----------------------
-// Funções auxiliares
-// ----------------------
-
 // Remove espaços no início e fim de uma string
 static char* trim(char* str) {
     while (*str == ' ' || *str == '\t' || *str == '\n' || *str == '\r') str++;
@@ -29,10 +25,6 @@ static void criarArquivoTXT(void) {
     }
     fclose(fp);
 }
-
-// ----------------------
-// Funções principais
-// ----------------------
 
 // Carrega um usuário do arquivo TXT pelo nome
 int carregarUsuarioTXT(User* u) {
@@ -155,4 +147,47 @@ void deletarUsuarioTXT(const char* usuarioNome) {
 
     remove(USUARIO_FILE);
     rename("temp.txt", USUARIO_FILE);
+}
+
+/// @brief carrega os atendentes do arquivo TXT 
+void carregarAtendentesTXT(void){
+    FILE* fp = fopen(USUARIO_FILE, "r");
+    if (!fp) {
+        criarArquivoTXT();
+        fp = fopen(USUARIO_FILE, "r");
+        if (!fp) return;
+    }
+
+    char linha[256];
+
+    while (fgets(linha, sizeof(linha), fp)) {
+        char* l = trim(linha);
+        char usuarioArquivo[50];
+        char senhaArquivo[50];
+        int tipo, id;
+        int dia, mes, ano, horas, minutos, segundos;
+
+        if (sscanf(l, "%49[^;];%49[^;];%d;%d;%d/%d/%d;%d:%d:%d",
+                   usuarioArquivo, senhaArquivo, &tipo, &id,
+                   &dia, &mes, &ano, &horas, &minutos, &segundos) == 10) {
+
+            if (tipo == 2) { // tipo 2 = tecnico
+                User* novoAtendente = (User*)malloc(sizeof(User));
+                strcpy(novoAtendente->usuario, usuarioArquivo);
+                strcpy(novoAtendente->senha, senhaArquivo);
+                novoAtendente->tipo = tipo;
+                novoAtendente->id = id;
+                novoAtendente->criacao.dia = dia;
+                novoAtendente->criacao.mes = mes;
+                novoAtendente->criacao.ano = ano;
+                novoAtendente->criacao.horas = horas;
+                novoAtendente->criacao.minutos = minutos;
+                novoAtendente->criacao.segundos = segundos;
+
+                arv_inserir(estruturasGlobais.atendentes, novoAtendente);
+            }
+        }
+    }
+
+    fclose(fp);
 }

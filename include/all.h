@@ -1,6 +1,14 @@
 #ifndef ALL_H
 #define ALL_H
 
+// lib
+#include "lib/pilha.h"
+#include "lib/fila.h"
+#include "lib/filadupla.h"
+#include "lib/filaprioridade.h"
+#include "lib/arvore_bin.h"
+
+
 // include chamados
 #include "app/chamados/chamado.h"
 
@@ -19,15 +27,8 @@
 //include prioridade
 #include "app/extras/prioridade.h"
 
-// lib
-#include "lib/pilha.h"
-#include "lib/fila.h"
-#include "lib/filadupla.h"
-#include "lib/filaprioridade.h"
-#include "lib/arvore_bin.h"
-
 // db
-#include "app/users/user.h"
+#include "app/users/userDb.h"
 #include "app/chamados/chamadosDb.h"
 #include "app/estoque/estoque.h"
 

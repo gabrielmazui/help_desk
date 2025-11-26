@@ -66,13 +66,25 @@ static void updateChamadoAndamento(int paginaAtual, int selected, int ** divisao
     
 }
 
+static void copiarUsuarioFila(filaDupla** f){
+    filaDupla* filaOrigem = estruturasGlobais.chamadosAndamento;
+    noDuplo* no = filaOrigem->inicio;
+    while(no != NULL){
+        if(strcmp(((chamado*)no->dado)->atendente, usuario.usuario) == 0){
+            filaDuplaInserir(*f, 0, no->dado);
+        }
+        no = no->prox;
+    }
+}
+
 /// @brief carregar os dados do menu de concluir chamado em andamento
 /// @param totalPaginas total de paginas
 /// @param divisaoPaginas matriz de divisao de paginas
 /// @param divisaoLinhas matriz de divisao de linhas
-static void carregarDadosMenuConcluirChamado(int * totalPaginas, int ***divisaoPaginas, int *** divisaoLinhas){
+static filaDupla* carregarDadosMenuConcluirChamado(int * totalPaginas, int ***divisaoPaginas, int *** divisaoLinhas){
     *totalPaginas = 1;
-    filaDupla* fAndamento = estruturasGlobais.chamadosAndamento;
+    filaDupla* fAndamento = malloc(sizeof(filaDupla));
+    copiarUsuarioFila(&fAndamento);
     noDuplo* no = fAndamento->inicio;
     int count = 0;
     int linhasAtual = 8; // primeira pagina tem header;
@@ -121,12 +133,12 @@ static void carregarDadosMenuConcluirChamado(int * totalPaginas, int ***divisaoP
         }
         
         // preencher divisao paginas e linhas
-        (*divisaoPaginas)[paginaAtual][chamadoAtualNaPagina] = 1; // marcar que tem chamado
+        (*divisaoPaginas)[paginaAtual][chamadoAtualNaPagina] = (count > 0) ? 1 : 0; // marcar que tem chamado ou que nao tem
         (*divisaoLinhas)[paginaAtual][chamadoAtualNaPagina + 1] = linhasAtual + 1; // marcar linha inicial do chamado
         chamadoAtualNaPagina++;
         no = no->prox;
     }
-    
+    return fAndamento;
 }
 
 /// @brief printar o menu de concluir chamado em andamento 
@@ -134,8 +146,7 @@ static void carregarDadosMenuConcluirChamado(int * totalPaginas, int ***divisaoP
 /// @param totalPaginas total de paginas
 /// @param paginaAtual pagina atual
 /// @param selected chamado ou opcao selecionada
-static void printarMenuConcluirChamado(int ** divisaoPaginas, int totalPaginas, int paginaAtual, int selected){
-    filaDupla* fAndamento = estruturasGlobais.chamadosAndamento;
+static void printarMenuConcluirChamado(int ** divisaoPaginas, int totalPaginas, int paginaAtual, int selected, filaDupla* fAndamento){
     noDuplo* no = fAndamento->inicio;
     int count = 0;
     if(paginaAtual == 1){
@@ -246,11 +257,11 @@ void chamadosAtendente(void){
     int totalPaginas = 0;
     int ** divisaoPaginas = NULL;
     int ** divisaoLinhas = NULL;
-    carregarDadosMenuConcluirChamado(&totalPaginas, &divisaoPaginas, &divisaoLinhas);
+    filaDupla* fAndamento = carregarDadosMenuConcluirChamado(&totalPaginas, &divisaoPaginas, &divisaoLinhas);
     int paginaAtual = 1;
     int selected = 1;
 
-    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
+    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
     while(1){
         int ultimaOpcao = 0;
         if(paginaAtual == 1){
@@ -265,11 +276,12 @@ void chamadosAtendente(void){
             esperar_tamanho_minimo(42, 60);
             if(terminalPequenoAlertado){
                 clear();
-                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
+                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
                 terminalPequenoAlertado = 0;
             }
         }else if(k == KC_ESC){
-            popPilha(estruturasGlobais.pil);
+            menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+            free(temp); // tira o menu de atender chamado
             break;
         }else if(k == KC_UP){
             if(selected == 2 && paginaAtual == 1){
@@ -278,7 +290,7 @@ void chamadosAtendente(void){
                 // marcar voltar
                 updateOption(4, "Voltar", BG_BLUE, "");
                 selected--;
-            }else if(selected == 3 && paginaAtual == 1){
+            }else if(selected == 3 && paginaAtual == 1 && ultimaOpcao > 2){
                 // desmarcar chamado
                 updateChamadoAndamento(paginaAtual, selected - 2, divisaoLinhas, divisaoPaginas, 0);
                 selected--;
@@ -298,7 +310,7 @@ void chamadosAtendente(void){
                     }
                     selected = ultimaOpcaoTemp;
                     clear();
-                    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
+                    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
                 }else if(selected > 1){
                     int selectedPrev = selected;
                     if(paginaAtual == 1){
@@ -317,7 +329,7 @@ void chamadosAtendente(void){
                 // marcar sair
                 updateOption(5, "Sair", BG_RED, "");
                 selected++;
-            }else if(selected == 2 && paginaAtual == 1){
+            }else if(selected == 2 && paginaAtual == 1 && ultimaOpcao > 2){
                 // desmarcar sair
                 updateOption(5, "Sair", "", RED);
                 selected++;
@@ -327,7 +339,7 @@ void chamadosAtendente(void){
                     selected = 1;
                     paginaAtual++;
                     clear();
-                    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
+                    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
                 }else if(selected < ultimaOpcao){
                     int selectedPrev = selected;
                     if(paginaAtual == 1){
@@ -344,19 +356,20 @@ void chamadosAtendente(void){
                 paginaAtual++;
                 selected = 1;
                 clear();
-                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
+                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
             }
         }else if(k == KC_LEFT){
             if(paginaAtual > 1){
                 paginaAtual--;
                 selected = 1;
                 clear();
-                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
+                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
             }
         }else if(k == KC_ENTER){
             if(paginaAtual == 1 && selected == 1){
                 // voltar
-                popPilha(estruturasGlobais.pil);
+                menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+                free(temp); // tira o menu de atender chamado
                 lastSelected = 1;
                 break;
             }else if(paginaAtual == 1 && selected == 2){
@@ -394,4 +407,12 @@ void chamadosAtendente(void){
     }
     free(divisaoPaginas);
     free(divisaoLinhas);
+    
+    noDuplo* no = fAndamento->inicio;
+    while(no != NULL){
+        noDuplo* temp = no;
+        no = no->prox;
+        free(temp);
+    }
+    free(fAndamento);
 }

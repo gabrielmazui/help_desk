@@ -12,11 +12,11 @@ typedef struct fila{
     noFila* first;
     noFila* last;
     int n;
+    void (*liberar)(void* d);
 } fila;
 
 // criar uma fila
-fila* criarFila(void);
-
+fila* criarFila(void (*liberar)(void* d));
 // inserir elemento no fim da fila
 void filaInserir(fila * f, void* m);
 

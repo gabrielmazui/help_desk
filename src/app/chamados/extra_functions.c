@@ -56,7 +56,14 @@ void menuAtenderProximoChamado(void){
 void menuConcluirChamadoConfirmar(int indiceChamado){
     filaDupla* fAndamento = estruturasGlobais.chamadosAndamento;
     noDuplo* no = fAndamento->inicio;
-    for(int i = 0; i < indiceChamado; i++){
+     int i = 0;
+    while(1){
+        if(i == indiceChamado){
+            break;
+        }
+        if(strcmp(((chamado*)no->dado)->atendente, usuario.usuario) == 0){
+            i++;
+        }
         no = no->prox;
     }
     chamado* cham = (chamado*)no->dado;
@@ -92,6 +99,7 @@ void menuConcluirChamadoConfirmar(int indiceChamado){
    
     // separador
     printf(YELLOW"+----------------------------------------------------+"RESET);
+    
 }
 
 /// @brief menu para confirmar exclusao de chamado fechado

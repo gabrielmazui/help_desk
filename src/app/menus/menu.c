@@ -185,7 +185,7 @@ void mainMenu(void){
     menu1->minLinhas = 30;
     
     // colocar no top da fila
-    initEstruturas();
+    initConfigs();
     pilha * p = estruturasGlobais.pil;
     pushPilha(p, menu1);
     // colocar menu1 no topo
@@ -289,7 +289,6 @@ void mainMenu(void){
                     fundo2 = BG_RED;    
                 }
                 
-                
                 // atualizar a linha que estava selecionada antes
                 updateOption(linhas + selected - 2, menuEscolhido->options[selected-1], fundo1, corTexto1);
                 selected++;
@@ -300,15 +299,22 @@ void mainMenu(void){
         }else if(tecla == KC_ESC){
             // chama funcao de voltar 
             // no caso do menu UM sera de sair
-            menuHandlerEsc(menuEscolhido->type, p);
-            selected = 1;
-            clear();
-            menuEscolhido = (menuHandler*)topoPilha(p);
-            desenharMenuAtual(menuEscolhido, selected);
+            if(menuEscolhido->type == 1){
+                menuHandler *m = createMenu(9);
+                pushPilha(p, m);
+                selected = 1;
+                clear();
+                menuEscolhido = (menuHandler*)topoPilha(p);
+                desenharMenuAtual(menuEscolhido, selected);
+            }else{
+                popPilha(p);
+                clear();
+                menuEscolhido = (menuHandler*)topoPilha(p);
+                desenharMenuAtual(menuEscolhido, selected);
+            }
         }
     }
-    
-    // liberar estruturas de dados
+   
     filaPrioridadeLiberar(&estruturasGlobais.chamadosAbertosComPrioridade);
     filaLiberar(&estruturasGlobais.chamadosAbertosSemPrioridade);
     filaDuplaLiberar(&estruturasGlobais.chamadosAndamento);
@@ -316,5 +322,4 @@ void mainMenu(void){
     filaLiberar(&estruturasGlobais.chamadosConcluidos);
     arv_liberar(&estruturasGlobais.estoque);
     arv_liberar(&estruturasGlobais.atendentes);
-    pilhaLiberar(&estruturasGlobais.pil);
 }

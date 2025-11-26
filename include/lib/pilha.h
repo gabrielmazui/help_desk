@@ -5,10 +5,11 @@ typedef struct pilha{
     int n;  // numero de elemntos 
     int dim; // dimensao maxima do vetor
     void** vet;
+    void (*liberar)(void* d);
 }pilha;
 
 // funcao para criar uma pilha (retorna um ponteiro para ela)
-pilha* criarPilha(void);
+pilha* criarPilha(void (*liberar)(void* d));
 // inserir elemento no topo (push)
 void pushPilha(pilha* p, void* dado);
 // remover elemento do topo (pop)

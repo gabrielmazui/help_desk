@@ -3,3 +3,4 @@ edward;indialove;2;2;8/11/2025;19:10:0
 gerente;gerente123;3;3;8/11/2025;19:10:0
 admin;admin123;4;4;8/11/2025;19:10:0
 mazui;mazui123;5;5;8/11/2025;19:10:0
+cliente2;cliente123;1;6;8/11/2025;19:10:0

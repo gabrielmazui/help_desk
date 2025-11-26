@@ -75,7 +75,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             for (int i = 0; i < fp->n; i++) {
                 char tempDestino[7][50];
                 int linhasDescricao = quebrarDescricao((*vetPrioridadeTemp[i]).descricao, tempDestino);
-                int linhasTotais = linhasDescricao + 6;
+                int linhasTotais = linhasDescricao + 6 + ((chamado*)(fp->elementos[i]))->quantMateriais;
 
                 linhasPorChamadoAberto[index++] = linhasTotais;
                 totalLinhasAberto += linhasTotais;
@@ -87,7 +87,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
         while (atual) {
             char tempDestino[7][50];
             int linhasDescricao = quebrarDescricao((*((chamado*)(atual->dado))).descricao, tempDestino);
-            int linhasTotais = linhasDescricao + 6;
+            int linhasTotais = linhasDescricao + 6 + ((chamado*)(atual->dado))->quantMateriais;
 
             linhasPorChamadoAberto[index++] = linhasTotais;
             totalLinhasAberto += linhasTotais;
@@ -104,8 +104,8 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
         while (atual) {
             char tempDestino[7][50];
             int linhasDescricao = quebrarDescricao((*((chamado*)(atual->dado))).descricao, tempDestino);
-            int linhasTotais = linhasDescricao + 6;
-
+            int linhasTotais = linhasDescricao + 7 + ((chamado*)(atual->dado))->quantMateriais;
+            // 6 + 1 (atendente)
             linhasPorChamadoAndamento[index++] = linhasTotais;
             totalLinhasAndamento += linhasTotais;
 
@@ -120,8 +120,8 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
         while (atual) {
             char tempDestino[7][50];
             int linhasDescricao = quebrarDescricao((*((chamado*)(atual->dado))).descricao, tempDestino);
-            int linhasTotais = linhasDescricao + 6;
-
+            int linhasTotais = linhasDescricao + 6 + ((chamado*)(atual->dado))->quantMateriais;
+            // 6 + 1 (atendido por)
             linhasPorChamadoFechado[index++] = linhasTotais;
             totalLinhasFechado += linhasTotais;
 
@@ -140,13 +140,12 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     // alocar matrizAberto se tiver linhas
     if (*linhasAberto > 0) {
         *buf1 = calloc(*linhasAberto, sizeof(char*));
-        if (!(*buf1)) { // logs
+        if (!(*buf1)){ 
             perror("calloc matrizAberto"); exit(1); 
         }
         for (int i = 0; i < *linhasAberto; i++) {
             (*buf1)[i] = calloc(52, sizeof(char)); // 51 + '\0'
             if (!(*buf1)[i]) { 
-                // logs
                 perror("calloc matrizAberto[i]"); exit(1); 
             }
         }
@@ -155,14 +154,12 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     // alocar matrizAndamento se tiver linhas
     if (*linhasAndamento > 0) {
         *buf2 = calloc(*linhasAndamento, sizeof(char*));
-        if (!*buf2) { 
-            // logs
+        if (!*buf2) {   
             perror("calloc matrizAndamento"); exit(1); 
         }
         for (int i = 0; i < *linhasAndamento; i++) {
             (*buf2)[i] = calloc(52, sizeof(char));
             if (!(*buf2)[i]) { 
-                // logs
                 perror("calloc matrizAndamento[i]"); exit(1); 
             }
         }
@@ -190,10 +187,11 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     // 1 - titulo
     // 2 - prioridade
     // 3 - criador
-    // 4 - data e hora
-    // 5 - descricao
-    // 6 - separador
-
+    // 4 - atendente / atendido por (nao tem nos abertos)
+    // 5 - data e hora
+    // 6 - materiais
+    // 7 - descricao
+    // 8 - separador
     
     while(fUsed < fQuant || fdUsed < fdQuant || fAndamentoUsed < fAndamentoQuant || fpUsed < fpQuant) {
         // ========================================================
@@ -246,23 +244,108 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
 
         if (fpUsed < fpQuant) {
             matrizAberto[linhaAtualAberto][0] = '2'; // marca como prioridade
-            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%d", (*vetPrioridadeTemp[fpUsed]).prioridade);
+            char bufferPrioridade[10] = "Maxima";
+            switch((*vetPrioridadeTemp[fpUsed]).prioridade) {
+                case 0:
+                    strcpy(bufferPrioridade, "Minima");
+                    break;
+                case 1:
+                    strcpy(bufferPrioridade, "Baixa");
+                    break;
+                case 2:
+                    strcpy(bufferPrioridade, "Media");
+                    break;
+                case 3:
+                    strcpy(bufferPrioridade, "Alta");
+                    break;
+                case 4:
+                    strcpy(bufferPrioridade, "Urgente");
+                    break;
+                case 5:
+                    strcpy(bufferPrioridade, "Maxima");
+                    break;
+            }
+            
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s", bufferPrioridade);
             linhaAtualAberto++;
         } else if (fUsed < fQuant && atualFilaAberto) {
+            char bufferPrioridade[10] = "Maxima";
+            switch(((*((chamado*)atualFilaAberto->dado)).prioridade)) {
+                case 0:
+                    strcpy(bufferPrioridade, "Minima");
+                    break;
+                case 1:
+                    strcpy(bufferPrioridade, "Baixa");
+                    break;
+                case 2:
+                    strcpy(bufferPrioridade, "Media");
+                    break;
+                case 3:
+                    strcpy(bufferPrioridade, "Alta");
+                    break;
+                case 4:
+                    strcpy(bufferPrioridade, "Urgente");
+                    break;
+                case 5:
+                    strcpy(bufferPrioridade, "Maxima");
+                    break;
+            }
             matrizAberto[linhaAtualAberto][0] = '2'; // marca como prioridade
-            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%d", (*((chamado*)atualFilaAberto->dado)).prioridade);
+            snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s", bufferPrioridade);
             linhaAtualAberto++;
         }
 
         if (fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
+            char bufferPrioridade[10] = "Maxima";
+            switch(((*((chamado*)atualFilaAndamento->dado)).prioridade)) {
+                case 0:
+                    strcpy(bufferPrioridade, "Minima");
+                    break;
+                case 1:
+                    strcpy(bufferPrioridade, "Baixa");
+                    break;
+                case 2:
+                    strcpy(bufferPrioridade, "Media");
+                    break;
+                case 3:
+                    strcpy(bufferPrioridade, "Alta");
+                    break;
+                case 4:
+                    strcpy(bufferPrioridade, "Urgente");
+                    break;
+                case 5:
+                    strcpy(bufferPrioridade, "Maxima");
+                    break;
+            }
             matrizAndamento[linhaAtualAndamento][0] = '2'; // marca como prioridade
-            snprintf(matrizAndamento[linhaAtualAndamento] + 1, TAM_LINHA - 1, "%d", (*((chamado*)atualFilaAndamento->dado)).prioridade);
+            snprintf(matrizAndamento[linhaAtualAndamento] + 1, TAM_LINHA - 1, "%s", bufferPrioridade);
             linhaAtualAndamento++;
         }
 
         if (fdUsed < fdQuant && atualFilaFechado) {
+            char bufferPrioridade[10] = "Maxima";
+            switch(((*((chamado*)atualFilaFechado->dado)).prioridade)) {
+                case 0:
+                    strcpy(bufferPrioridade, "Minima");
+                    break;
+                case 1:
+                    strcpy(bufferPrioridade, "Baixa");
+                    break;
+                case 2:
+                    strcpy(bufferPrioridade, "Media");
+                    break;
+                case 3:
+                    strcpy(bufferPrioridade, "Alta");
+                    break;
+                case 4:
+                    strcpy(bufferPrioridade, "Urgente");
+                    break;
+                case 5:
+                    strcpy(bufferPrioridade, "Maxima");
+                    break;
+            }
             matrizFechado[linhaAtualFechado][0] = '2'; // marca como prioridade
-            snprintf(matrizFechado[linhaAtualFechado] + 1, TAM_LINHA - 1, "%d", (*((chamado*)atualFilaFechado->dado)).prioridade);
+            snprintf(matrizFechado[linhaAtualFechado] + 1, TAM_LINHA - 1, "%s", bufferPrioridade);
             linhaAtualFechado++;
         }
 
@@ -300,9 +383,23 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             linhaAtualFechado++;
         }
         
-        
         // ========================================================
-        // Linha 4: DATA E HORA
+        // Linha 4: ATENDENTE / ATENDIDO POR
+        // ========================================================
+        // APENAS PARA ANDAMENTO
+
+        if (*linhasAndamento > 0 && linhaAtualAndamento < *linhasAndamento) {
+            matrizAndamento[linhaAtualAndamento][0] = '\0';
+        }
+
+        if (fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
+            matrizAndamento[linhaAtualAndamento][0] = '4'; // marca como atendente
+            snprintf(matrizAndamento[linhaAtualAndamento] + 1, TAM_LINHA - 1, "%s", (*((chamado*)atualFilaAndamento->dado)).atendente);
+            linhaAtualAndamento++;
+        }
+
+        // ========================================================
+        // Linha 5: DATA E HORA
         // ========================================================
         if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
             matrizAberto[linhaAtualAberto][0] = '\0';
@@ -315,7 +412,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
         }
 
         if (fpUsed < fpQuant){
-            matrizAberto[linhaAtualAberto][0] = '4'; // marca como data e hora
+            matrizAberto[linhaAtualAberto][0] = '5'; // marca como data e hora
             snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%02d/%02d/%04d %02d:%02d:%02d",
                     (*vetPrioridadeTemp[fpUsed]).tempoComplexo.dia,
                     (*vetPrioridadeTemp[fpUsed]).tempoComplexo.mes,
@@ -326,7 +423,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             linhaAtualAberto++;
         }
         else if (fUsed < fQuant && atualFilaAberto) {
-            matrizAberto[linhaAtualAberto][0] = '4'; // marca como data e hora
+            matrizAberto[linhaAtualAberto][0] = '5'; // marca como data e hora
             snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%02d/%02d/%04d %02d:%02d:%02d",
                     (*((chamado*)atualFilaAberto->dado)).tempoComplexo.dia,
                     (*((chamado*)atualFilaAberto->dado)).tempoComplexo.mes,
@@ -337,7 +434,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             linhaAtualAberto++;
         }
         if (fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
-            matrizAndamento[linhaAtualAndamento][0] = '4'; // marca como data e hora
+            matrizAndamento[linhaAtualAndamento][0] = '5'; // marca como data e hora
             snprintf(matrizAndamento[linhaAtualAndamento] + 1, TAM_LINHA - 1, "%02d/%02d/%04d %02d:%02d:%02d",
                     (*((chamado*)atualFilaAndamento->dado)).tempoComplexo.dia,
                     (*((chamado*)atualFilaAndamento->dado)).tempoComplexo.mes,
@@ -349,7 +446,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
         }
         
         if (fdUsed < fdQuant && atualFilaFechado) {
-            matrizFechado[linhaAtualFechado][0] = '4'; // marca como data e hora
+            matrizFechado[linhaAtualFechado][0] = '5'; // marca como data e hora
             snprintf(matrizFechado[linhaAtualFechado] + 1, TAM_LINHA - 1, "%02d/%02d/%04d %02d:%02d:%02d",
                     (*((chamado*)atualFilaFechado->dado)).tempoComplexo.dia,
                     (*((chamado*)atualFilaFechado->dado)).tempoComplexo.mes,
@@ -360,6 +457,59 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             linhaAtualFechado++;
         }
         
+        // ========================================================
+        // Linha 6: MATERIAIS
+        // ========================================================
+        if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
+            matrizAberto[linhaAtualAberto][0] = '\0';
+        }
+        if (*linhasAndamento > 0 && linhaAtualAndamento < *linhasAndamento) {
+            matrizAndamento[linhaAtualAndamento][0] = '\0';
+        }
+        if (*linhasFechado > 0 && linhaAtualFechado < *linhasFechado) {
+            matrizFechado[linhaAtualFechado][0] = '\0';
+        }
+        if (fpUsed < fpQuant) {
+            int quantMateriais = (*vetPrioridadeTemp[fpUsed]).quantMateriais;
+            noFila* temp = vetPrioridadeTemp[fpUsed]->materiais->first;
+            for (int i = 0; i < quantMateriais; i++) {
+                matrizAberto[linhaAtualAberto][0] = '6'; // marca como material
+                snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s (%d)", (((Item*)(temp->dado))->nome), (*vetPrioridadeTemp[fpUsed]).quantMateriaisPorItem[i]);
+                linhaAtualAberto++;
+                temp = temp->prox;
+            }
+            
+        } else if (fUsed < fQuant && atualFilaAberto) {
+            int quantMateriais = (*((chamado*)atualFilaAberto->dado)).quantMateriais;
+            noFila* temp = ((chamado*)atualFilaAberto->dado)->materiais->first;
+            for (int i = 0; i < quantMateriais; i++) {
+                matrizAberto[linhaAtualAberto][0] = '6'; // marca como material
+                snprintf(matrizAberto[linhaAtualAberto] + 1, TAM_LINHA - 1, "%s (%d)",(((Item*)(temp->dado))->nome), (*((chamado*)atualFilaAberto->dado)).quantMateriaisPorItem[i]);
+                linhaAtualAberto++;
+                temp = temp->prox;
+            }
+        }
+        if(fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
+            int quantMateriais = (*((chamado*)atualFilaAndamento->dado)).quantMateriais;
+            noFila* temp = ((chamado*)atualFilaAndamento->dado)->materiais->first;
+            for (int i = 0; i < quantMateriais; i++) {
+                matrizAndamento[linhaAtualAndamento][0] = '6'; // marca como material
+                snprintf(matrizAndamento[linhaAtualAndamento] + 1, TAM_LINHA - 1, "%s (%d)",(((Item*)(temp->dado))->nome), (*((chamado*)atualFilaAndamento->dado)).quantMateriaisPorItem[i]);
+                linhaAtualAndamento++;
+                temp = temp->prox;
+            }
+        }
+        if(fdUsed < fdQuant && atualFilaFechado){
+            int quantMateriais = (*((chamado*)atualFilaFechado->dado)).quantMateriais;
+            noFila* temp = ((chamado*)atualFilaFechado->dado)->materiais->first;
+            for (int i = 0; i < quantMateriais; i++) {
+                matrizFechado[linhaAtualFechado][0] = '6'; // marca como material
+                snprintf(matrizFechado[linhaAtualFechado] + 1, TAM_LINHA - 1, "%s (%d)",(((Item*)(temp->dado))->nome), (*((chamado*)atualFilaFechado->dado)).quantMateriaisPorItem[i]);
+                linhaAtualFechado++;
+                temp = temp->prox;
+            }
+        }
+
         // =============== LINHA VAZIA ==========================================
         if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
             matrizAberto[linhaAtualAberto][0] = '\0';
@@ -385,7 +535,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
         }
         
         // ========================================================
-        // Linha 5+: DESCRIÇÃO (7 linhas max)
+        // Linha 7+: DESCRIÇÃO (7 linhas max)
         // ========================================================
 
         if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
@@ -409,11 +559,11 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             // guardar a descricao na matriz
             int linha = 0;
             while(desc1[linha][0] != '\0' && linha < 7) {
-                matrizAberto[linhaAtualAberto + linha][0] = '5'; // marca como descricao
+                matrizAberto[linhaAtualAberto + linha][0] = '7'; // marca como descricao
                 snprintf(matrizAberto[linhaAtualAberto + linha] + 1, TAM_LINHA - 1, "%s", desc1[linha]);
                 linha++;
             }
-            matrizAberto[linhaAtualAberto + linha][0] = '6'; // marca como separador
+            matrizAberto[linhaAtualAberto + linha][0] = '8'; // marca como separador
             linhaAtualAberto += linha + 1;
 
         // fila normal de aberto
@@ -423,11 +573,11 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             // guardar a descricao na matriz
             int linha = 0;
             while(desc1[linha][0] != '\0' && linha < 7) {
-                matrizAberto[linhaAtualAberto + linha][0] = '5'; // marca como descricao
+                matrizAberto[linhaAtualAberto + linha][0] = '7'; // marca como descricao
                 snprintf(matrizAberto[linhaAtualAberto + linha] + 1, TAM_LINHA - 1, "%s", desc1[linha]);
                 linha++;
             }
-            matrizAberto[linhaAtualAberto + linha][0] = '6'; // marca como separador
+            matrizAberto[linhaAtualAberto + linha][0] = '8'; // marca como separador
             linhaAtualAberto += linha + 1;
         }
 
@@ -439,11 +589,11 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
 
             int linha = 0;
             while(desc2[linha][0] != '\0' && linha < 7) {
-                matrizAndamento[linhaAtualAndamento + linha][0] = '5'; // marca como descricao
+                matrizAndamento[linhaAtualAndamento + linha][0] = '7'; // marca como descricao
                 snprintf(matrizAndamento[linhaAtualAndamento + linha] + 1, TAM_LINHA - 1, "%s", desc2[linha]);
                 linha++;
             }
-            matrizAndamento[linhaAtualAndamento + linha][0] = '6'; // marca como separador
+            matrizAndamento[linhaAtualAndamento + linha][0] = '8'; // marca como separador
             linhaAtualAndamento += linha + 1;
         }
 
@@ -454,11 +604,11 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
 
             int linha = 0;
             while(desc3[linha][0] != '\0' && linha < 7) {
-                matrizFechado[linhaAtualFechado + linha][0] = '5'; // marca como descricao
+                matrizFechado[linhaAtualFechado + linha][0] = '7'; // marca como descricao
                 snprintf(matrizFechado[linhaAtualFechado + linha] + 1, TAM_LINHA - 1, "%s", desc3[linha]);
                 linha++;
             }
-            matrizFechado[linhaAtualFechado + linha][0] = '6'; // marca como separador
+            matrizFechado[linhaAtualFechado + linha][0] = '8'; // marca como separador
             linhaAtualFechado += linha + 1;
         }
         // ========================================================
@@ -725,15 +875,23 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
                 // criador
                 printf("%s| %sCriador: %s%-41s %s|"RESET, GREEN, MAGENTA, WHITE, buf1[i1] + 1, GREEN);
                 break;
-            case '4':
+            case 4:
+                // atendente
+                printf("%s| %sAtendente: %s%-39s %s|"RESET, GREEN, MAGENTA, WHITE, buf1[i1] + 1, GREEN);
+                break;
+            case '5':
                 // data e hora
                 printf("%s| %sData e Hora: %s%-37s %s|"RESET, GREEN, MAGENTA, WHITE, buf1[i1] + 1, GREEN);
                 break;
-            case '5':
+            case '6':
+                // materiais
+                printf("%s| %s%-50s %s|"RESET, GREEN, WHITE, buf1[i1] + 1, GREEN);
+                break;
+            case '7':
                 // descricao
                 printf("%s| %s%-50s %s|"RESET, GREEN, CYAN, buf1[i1] + 1, GREEN);
                 break;
-            case '6':
+            case '8':
                 // separador
                 printf(GREEN"+----------------------------------------------------+"RESET);
                 break;
@@ -747,78 +905,94 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
         // ---------------------------------------------------------
         switch (firstCharAndamento)
         {
-        case '0':
-            // linha vazia
-            printf(YELLOW"| %-50s |"RESET, "");
-            break;
-        case '1':
-            // titulo
-            printf("%s| %s%-50s %s|"RESET, YELLOW, BLUE, buf2[i2] + 1, YELLOW);
-            break;
+            case '0':
+                // linha vazia
+                printf(YELLOW"| %-50s |"RESET, "");
+                break;
+            case '1':
+                // titulo
+                printf("%s| %s%-50s %s|"RESET, YELLOW, BLUE, buf1[i1] + 1, YELLOW);
+                break;
 
-        case '2':
-            // prioridade
-            printf("%s| %sPrioridade: %s%-38s %s|"RESET, YELLOW, MAGENTA, WHITE, buf2[i2] + 1, YELLOW);
-            break;
-        case '3':
-            // criador
-            printf("%s| %sCriador: %s%-41s %s|"RESET, YELLOW, MAGENTA, WHITE, buf2[i2] + 1, YELLOW);
-            break;
-        case '4':
-            // data e hora
-            printf("%s| %sData e Hora: %s%-37s %s|"RESET, YELLOW, MAGENTA, WHITE, buf2[i2] + 1, YELLOW);
-            break;
-        case '5':
-            // descricao
-            printf("%s| %s%-50s %s|"RESET, YELLOW, CYAN, buf2[i2] + 1, YELLOW);
-            break;
-        case '6':
-            // separador
-            printf(YELLOW"+----------------------------------------------------+"RESET);
-            break;
-        default:
-            // linha vazia
-            printf("%-54s", "");
-            break;
+            case '2':
+                // prioridade
+                printf("%s| %sPrioridade: %s%-38s %s|"RESET, YELLOW, MAGENTA, WHITE, buf1[i1] + 1, YELLOW);
+                break;
+            case '3':
+                // criador
+                printf("%s| %sCriador: %s%-41s %s|"RESET, YELLOW, MAGENTA, WHITE, buf1[i1] + 1, YELLOW);
+                break;
+            case 4:
+                // atendente
+                printf("%s| %sAtendente: %s%-39s %s|"RESET, YELLOW, MAGENTA, WHITE, buf1[i1] + 1, YELLOW);
+                break;
+            case '5':
+                // data e hora
+                printf("%s| %sData e Hora: %s%-37s %s|"RESET, YELLOW, MAGENTA, WHITE, buf1[i1] + 1, YELLOW);
+                break;
+            case '6':
+                // materiais
+                printf("%s| %s%-50s %s|"RESET, YELLOW, WHITE, buf1[i1] + 1, YELLOW);
+                break;
+            case '7':
+                // descricao
+                printf("%s| %s%-50s %s|"RESET, YELLOW, CYAN, buf1[i1] + 1, YELLOW);
+                break;
+            case '8':
+                // separador
+                printf(YELLOW"+----------------------------------------------------+"RESET);
+                break;
+            default:
+                // linha vazia
+                printf("%-54s", "");
+                break;
         }
         printf("   ");
 
         // ---------------------------------------------------------
         switch (firstCharFechado)
         {
-        case '0':
-            // linha vazia
-            printf(RED"| %-50s |"RESET, "");
-            break;
-        case '1':
-            // titulo
-            printf("%s| %s%-50s %s|"RESET, RED, BLUE, buf3[i3] + 1, RED);
-            break;
+            case '0':
+                // linha vazia
+                printf(RED"| %-50s |"RESET, "");
+                break;
+            case '1':
+                // titulo
+                printf("%s| %s%-50s %s|"RESET, RED, BLUE, buf1[i1] + 1, RED);
+                break;
 
-        case '2':
-            // prioridade
-            printf("%s| %sPrioridade: %s%-38s %s|"RESET, RED, MAGENTA, WHITE, buf3[i3] + 1, RED);
-            break;
-        case '3':
-            // criador
-            printf("%s| %sCriador: %s%-41s %s|"RESET, RED, MAGENTA, WHITE, buf3[i3] + 1, RED);
-            break;
-        case '4':
-            // data e hora
-            printf("%s| %sData e Hora: %s%-37s %s|"RESET, RED, MAGENTA, WHITE, buf3[i3] + 1, RED);
-            break;
-        case '5':
-            // descricao
-            printf("%s| %s%-50s %s|"RESET, RED, CYAN, buf3[i3] + 1, RED);
-            break;
-        case '6':
-            // separador
-            printf(RED"+----------------------------------------------------+"RESET);
-            break;
-        default:
-            // linha vazia
-            printf("%-54s", "");
-            break;
+            case '2':
+                // prioridade
+                printf("%s| %sPrioridade: %s%-38s %s|"RESET, RED, MAGENTA, WHITE, buf1[i1] + 1, RED);
+                break;
+            case '3':
+                // criador
+                printf("%s| %sCriador: %s%-41s %s|"RESET, RED, MAGENTA, WHITE, buf1[i1] + 1, RED);
+                break;
+            case 4:
+                // atendente
+                printf("%s| %sAtendente: %s%-39s %s|"RESET, RED, MAGENTA, WHITE, buf1[i1] + 1, RED);
+                break;
+            case '5':
+                // data e hora
+                printf("%s| %sData e Hora: %s%-37s %s|"RESET, RED, MAGENTA, WHITE, buf1[i1] + 1, RED);
+                break;
+            case '6':
+                // materiais
+                printf("%s| %s%-50s %s|"RESET, RED, WHITE, buf1[i1] + 1, RED);
+                break;
+            case '7':
+                // descricao
+                printf("%s| %s%-50s %s|"RESET, RED, CYAN, buf1[i1] + 1, RED);
+                break;
+            case '8':
+                // separador
+                printf(RED"+----------------------------------------------------+"RESET);
+                break;
+            default:
+                // linha vazia
+                printf("%-54s", "");
+                break;
         }
         printf("\n");
         fflush(stdout);
@@ -873,7 +1047,8 @@ void chamadosAdmins(void){
             }
             continue;
         }else if(k == KC_ESC){
-            popPilha(estruturasGlobais.pil);
+            menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+            free(temp); // tira o menu de atender chamado
             break;
         }
         if(paginaAtual == 1){
@@ -934,7 +1109,8 @@ void chamadosAdmins(void){
                     }
                 }else if(selected == 2){
                     // voltar
-                    popPilha(estruturasGlobais.pil);
+                    menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+                    free(temp); // tira o menu de atender chamado
                     break;
                 }else if(selected == 3){
                     // sair

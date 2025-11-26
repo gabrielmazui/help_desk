@@ -647,49 +647,6 @@ void updateOption(int linha, const char* texto, const char* fundo, const char* c
     fflush(stdout);
 }
 
-/// @brief Cria um chamado e adiciona na fila correta
-/// @param c O chamado a ser criado
-void criarChamado(chamado* c){
-    // funcao para criar um chamado e adicionar na fila de prioridade
-    if(c->prioridade <= 0){
-        fila* fNormal = estruturasGlobais.chamadosAbertosSemPrioridade;
-        filaInserir(fNormal, c);
-    }else{
-        filaPrioridade* fp = estruturasGlobais.chamadosAbertosComPrioridade;
-        filaPrioridadeInserir(fp, c);
-    }
-}
-
-/// @brief  Função para atender um chamado
-void atenderChamado(void){
-   chamado* c = NULL;
-    if(estruturasGlobais.chamadosAbertosComPrioridade->n > 0)
-        c = (chamado*)filaPrioridadeRemover(estruturasGlobais.chamadosAbertosComPrioridade);
-    else{
-        c = (chamado*)filaRetirar(estruturasGlobais.chamadosAbertosSemPrioridade);
-    }
-    filaDuplaInserir(estruturasGlobais.chamadosAndamento,0, c);
-}
-
-/// @brief  Função para concluir um chamado
-/// @param indice O índice do chamado a ser concluído
-void concluirChamado(int indice){
-    filaDupla* fAndamento = estruturasGlobais.chamadosAndamento;
-    chamado* c = (chamado*)filaDuplaRemover(fAndamento, indice);
-    filaInserir(estruturasGlobais.chamadosConcluidos, c);
-}
-
-/// @brief deletar um chamado concluido
-/// @param indice O índice do chamado a ser deletado
-void deletarChamado(int indice, int todos){
-    if(todos){
-        filaDuplaEsvaziar(estruturasGlobais.chamadosSuspensos);
-    }else{
-        filaDupla* fd = estruturasGlobais.chamadosAndamento;
-        filaDuplaRemover(fd, indice);
-    }
-}
-
 // funcao para limpar a tela
 void clear(void){
     #ifdef _WIN32

@@ -6,6 +6,10 @@
 #include "all.h"
 
 
+static void limparItems(void* a){
+    free(a);
+}
+
 static void menuExtraItemEstoque(void){
     clear();
     repetirChar(15, '-', BLUE);
@@ -15,8 +19,27 @@ static void menuExtraItemEstoque(void){
     printf(GREEN" %s"RESET, "Qual o nome do item que precisa ser adicionado ao estoque?");
     printf("\n\n");
     printf(" Nome do item: ");
-    char nome[50];
-    inputASCII(nome, 50, BLUE, 0);
+    char nome[50] = "";
+    while(strlen(nome) == 0){
+        KeyCode k = inputASCII(nome, 45, BLUE, 0);
+        if(k == RESIZE_EVENT){
+            if(terminalPequenoAlertado){
+                terminalPequenoAlertado = 0;
+                esperar_tamanho_minimo(10, 55);
+                clear();
+                repetirChar(15, '-', BLUE);
+                printf(BLUE"%s"RESET, "Criar chamado");
+                repetirChar(15, '-', BLUE);
+                printf("\n");
+                printf(GREEN" %s"RESET, "Qual o nome do item que precisa ser adicionado ao estoque?");
+                printf("\n\n");
+                printf(" Nome do item: %s", nome);
+                fflush(stdout);
+            }
+        }else if(k == KC_ESC){
+            return;
+        }
+    }
     Item* item = malloc(sizeof(Item));
     item->id = itemIdCounter++;
     item->quantidade = 0;
@@ -83,7 +106,7 @@ static void printarBufferMateriais(char **buffer, int paginas, int paginaAtual, 
     printf("\n\n");
     char* options[2] = {"Material necessario nao esta na lista", "Concluir"};
     for(int i = 0; i < 2; i++){
-        if(selected == i + 1 + quantOptions[paginaAtual - 1]){
+        if(selected == i + 1){
             printf(" %s%s"RESET, BG_BLUE, options[i]);
         }else{
             printf(" %s%s"RESET, BLUE, options[i]);
@@ -93,13 +116,15 @@ static void printarBufferMateriais(char **buffer, int paginas, int paginaAtual, 
     printf("\n");
     repetirChar(43, '-', BLUE);
     // 7 linhas de header por pagina
-    printf("\n\n\n"); // + 2 linhas de espaço
+    printf("\n"); // + 2 linhas de espaço
+    printf(RED"Escolha no maximo 5 tipos de materiais diferentes"RESET);
+    printf("\n\n");
 
     for(int i = 0; i < quantOptions[paginaAtual - 1]; i++){
         if(selected == i + 3){
-            printf(" %s%s"RESET, BG_BLUE, buffer[i]);
+            printf(" %s%s"RESET, BG_BLUE, buffer[i + (paginaAtual -1)*10]);
         }else{
-            printf(" %s%s"RESET, BLUE, buffer[i]);
+            printf(" %s%s"RESET, BLUE, buffer[i + (paginaAtual -1)*10]);
         }
         printf("\n");
     }
@@ -186,7 +211,7 @@ static void criarChamadoPrintMenu(int type){
 
 /// @brief Função para o menu de criar um chamado
 /// @param prioridade A prioridade do chamado
-/// @param comPreferencia Indica se o chamado tem preferência
+/// @param comPreferencia Indica se o chamado tem preferência (1=sim, 2=não)
 /// @param usuario O usuário que está criando o chamado
 /// @param titulo O título do chamado
 /// @param descricao A descrição do chamado
@@ -196,6 +221,7 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
     // tipo 0 -> perguntar prioridade
     // tipo 1 -> perguntar titulo
     // tipo 2 -> perguntar descricao
+
     if(comPreferencia == 1 && tipo == 0){
         esperar_tamanho_minimo(17, 45);
         clear();
@@ -215,7 +241,8 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
             }
             if(k == KC_ESC){
                 // se tiver esc volta pro menu de pergunta se tem prioridade
-                popPilha(estruturasGlobais.pil);
+                menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+                free(temp); // tira o menu de atender chamado
                 clear();
                 return;
             }
@@ -241,6 +268,10 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
         }
         tipo = 1; // ir para a proxima parte
     }
+    if(tipo == 0 && comPreferencia == 2){
+        prioridade = 0; // sem preferencia
+        tipo = 1; // ir para a proxima parte
+    }
     int mostrarBuffer = 1;
     if(tipo == 1){
         // parte 2
@@ -264,13 +295,14 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                 mostrarBuffer = 0;
                 continue;
             }else if(k2 == KC_ESC){
-                // se for pressionado o esc retorna para o primeiro menu
+                // se for pressionado o esc retorna para o menu anterior
                 clear();
-                if(comPreferencia){
+                if(comPreferencia == 1){
                     // preferencia 0 para permitir que seja perguntado de novo
                     menuCriarChamadoHandler(prioridade, comPreferencia, titulo, descricao, 0);
                 }else{
-                    popPilha(estruturasGlobais.pil);
+                    menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+                    free(temp); // tira o menu de atender chamado
                     // caso nao tiver preferencia, volta para o menu de criar chamado
                 }
                 // chamo a funcao novamente, para voltar ao menu de qual a preferencia
@@ -326,12 +358,13 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
     // materiais necessarios
     char **buffer = NULL;
     int* quantOptions = NULL;
-    int paginas = 1;
+    int paginas = 0;
     int selected = 1;
     carregarBufferMateriais(&buffer, &paginas, &quantOptions);
     int paginaAtual = 1;
     printarBufferMateriais(buffer, paginas, paginaAtual, selected, quantOptions);
     char* options[2] = {"Material necessario nao esta na lista", "Concluir"};
+    int quantMateriaisSelecionados = 0;
     while(1){
         KeyCode k = userGetKey();
         if(k == RESIZE_EVENT){
@@ -352,7 +385,7 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                 updateOption(4, options[0], BG_BLUE, "");
             }else if(selected == 3){
                 if(quantOptions[paginaAtual - 1] > 0){
-                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
+                    updateOption(selected + 7, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
                     selected--;
                     updateOption(5, options[1], BG_BLUE, "");
                 }else{
@@ -369,11 +402,11 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                     snprintf(txt, sizeof(txt), "< Pagina %d/%d >", paginaAtual, paginas);
                     updateOption(25, txt, "", BLUE);
                     selected--;
-                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
+                    updateOption(selected + 7, buffer[(selected - 3) + (paginaAtual-1)*10], BG_BLUE, "");
                 }else{
-                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
+                    updateOption(selected + 7, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
                     selected--;
-                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], BG_BLUE, "");
+                    updateOption(selected + 7, buffer[(selected - 3) + (paginaAtual-1)*10], BG_BLUE, "");
                 }
             }
         }
@@ -389,7 +422,7 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                     updateOption(5, options[1], "", BLUE);
                     selected++; // desce
                     // Coloca destaque na nova opção
-                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], BG_BLUE, "");
+                    updateOption(selected + 7, buffer[(selected - 3) + (paginaAtual-1)*10], BG_BLUE, "");
                 }else{
                     updateOption(5, options[1], "", BLUE);
                     selected++;
@@ -399,15 +432,15 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                 }
             }else{
                 if(selected == quantOptions[paginaAtual - 1] + 2){
-                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
+                    updateOption(selected + 7, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
                     selected++;
                     char txt[100];
                     snprintf(txt, sizeof(txt), "< Pagina %d/%d >", paginaAtual, paginas);
                     updateOption(25, txt, BG_BLUE, "");
                 }else{
-                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
+                    updateOption(selected + 7, buffer[(selected - 3) + (paginaAtual-1)*10], "", BLUE);
                     selected++;
-                    updateOption(selected + 6, buffer[(selected - 3) + (paginaAtual-1)*10], BG_BLUE, "");
+                    updateOption(selected + 7, buffer[(selected - 3) + (paginaAtual-1)*10], BG_BLUE, "");
                 }
             }
             
@@ -416,7 +449,7 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                 // mudar pagina para a esquerda
                 if(paginaAtual > 1){
                     paginaAtual--;
-                    selected = 1;
+                    selected = 3+ quantOptions[paginaAtual - 1];
                     printarBufferMateriais(buffer, paginas, paginaAtual, selected, quantOptions);
                 }
             }else if(selected > 2){
@@ -426,6 +459,9 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                     int len = strlen(nome);
                     nome[len-1] = '\0';
                     if(quantidade > 0){
+                        if(quantidade == 1){
+                            quantMateriaisSelecionados--;
+                        }
                         quantidade--;
                         snprintf(buffer[selected - 3 + (paginaAtual -1)*10], 60, "%s < %d >", nome, quantidade);
                         updateOption(selected + 7, buffer[selected - 3 + (paginaAtual -1)*10], BG_BLUE, "");
@@ -437,7 +473,7 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                 // mudar pagina para a direita
                 if(paginaAtual < paginas){
                     paginaAtual++;
-                    selected = 1;
+                    selected = 3 + quantOptions[paginaAtual - 1];
                     printarBufferMateriais(buffer, paginas, paginaAtual, selected, quantOptions);
                 }
             }else if(selected > 2){
@@ -446,7 +482,10 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                 if (sscanf(buffer[selected - 3 + (paginaAtual -1)*10], "%50[^<]< %d >", nome, &quantidade) == 2){
                     int len = strlen(nome);
                     nome[len-1] = '\0';
-                    if(quantidade < 10){
+                    if(quantidade < 10 && (quantMateriaisSelecionados < 5 || quantidade > 0)){
+                        if(quantidade == 0){
+                            quantMateriaisSelecionados++;
+                        }
                         quantidade++;
                         snprintf(buffer[selected - 3 + (paginaAtual -1)*10], 60, "%s < %d >", nome, quantidade);
                         updateOption(selected + 7, buffer[selected - 3 + (paginaAtual -1)*10], BG_BLUE, "");
@@ -461,24 +500,25 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
                     free(buffer[i]);
                 }
                 free(buffer);
+                free(quantOptions);
+                buffer = NULL;
+                paginas = 0;
+                quantOptions = NULL;
+                quantMateriaisSelecionados = 0;
                 carregarBufferMateriais(&buffer, &paginas, &quantOptions);
                 printarBufferMateriais(buffer, paginas, paginaAtual, selected, quantOptions);
+                selected = 1;
                 continue;
             }else if(selected == 2){
                 // concluir
-                free(quantOptions);
-                for(int i = 0; i < paginas; i++){
-                    free(buffer[i]);
-                }
-                free(buffer);
                 break;
             }
         }
     }
 
-
+  
     chamado* cham = malloc(sizeof(chamado));
-    
+    cham->id = chamadoIdCounter++;
     strncpy(cham->titulo, titulo, sizeof(cham->titulo)-1);
     cham->titulo[sizeof(cham->titulo)-1] = '\0'; // garante terminação
 
@@ -487,19 +527,59 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
 
     strncpy(cham->criador, usuario.usuario, sizeof(cham->criador)-1);
     cham->criador[sizeof(cham->criador)-1] = '\0';
+    cham->atendente[0] = '\0'; // nenhum atendente ainda
 
     Tempo t = tempoAgora();
     time_t agora = time(NULL);          // pega o tempo atual em segundos
     cham->tempoSimples = agora;
     cham->tempoComplexo = t;
-    cham->materiais = criarFila();
-    
+    cham->materiais = criarFila(limparItems);
     if(comPreferencia == 1){
         cham->prioridade = prioridade;
     }else{
         cham->prioridade = 0;
     }
-    popPilha(estruturasGlobais.pil);
-    popPilha(estruturasGlobais.pil);
+    cham->cancelado = 0;
+    cham->quantMateriais = 0;
+    cham->quantMateriaisPorItem = malloc(sizeof(int));
+    for(int i = 0; i < paginas; i++){
+        for(int j = 0; j < quantOptions[i]; j++){
+            char nome[51] = {0};
+            int quantidade;
+            if (sscanf(buffer[j + i*10], "%51[^<]< %d >", nome, &quantidade) == 2){
+                if(quantidade > 0){
+                    Item* itemTemp = calloc(1, sizeof(Item));
+                    int len = strlen(nome);
+                    while (len > 0 && (nome[len-1] == ' ' || nome[len-1] == '\t'))
+                        nome[--len] = '\0';
+                    strcpy(itemTemp->nome, nome);
+                    Item* itemEncontrado = (Item*)arv_buscar(estruturasGlobais.estoque, itemTemp);
+                    if(itemEncontrado == NULL) printf("vazio\n");
+                    free(itemTemp);
+                    filaInserir(cham->materiais, itemEncontrado);
+                    if(cham->quantMateriais == 0){
+                        cham->quantMateriaisPorItem[0] = quantidade;
+                    }else{
+                        cham->quantMateriaisPorItem = realloc(cham->quantMateriaisPorItem, sizeof(int) * (cham->quantMateriais + 1));
+                        cham->quantMateriaisPorItem[cham->quantMateriais] = quantidade;
+                    }
+                    (cham->quantMateriais)++;
+                }
+            }
+        }
+    } 
+
+    
+    // liberar ponteiros
+    free(quantOptions);
+    for(int i = 0; i < paginas; i++){
+        free(buffer[i]);
+    }
+    free(buffer);
+
+    menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+    free(temp); // tira o menu de atender chamado
+    menuHandler* temp2 = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+    free(temp2); // tira o menu de atender chamado
     criarChamado(cham);
 }

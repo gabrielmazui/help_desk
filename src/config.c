@@ -13,12 +13,17 @@ int lastSelected = 1; // opcao escolhida no menu anterior, util para as funcoes 
 int userIdCounter = 0;
 int chamadoIdCounter = 0;
 int itemIdCounter = 0;
+char * atendenteAtual = "";
 
 User usuario = {0}; // usuario logado atualmente
 
 static int compararUsuarios(void* a, void* b) {
     User* userA = (User*)a;
     User* userB = (User*)b;
+    int nmrA = userA->Qchamados;
+    int nmrB = userB->Qchamados;
+    if(nmrA < nmrB) return -1;
+    if(nmrA > nmrB) return 1;
     return strcmp(userA->usuario, userB->usuario);
 }
 
@@ -32,6 +37,25 @@ static int compararChamados(void* a, void* b) {
     if(((chamado*)a)->prioridade > ((chamado*)b)->prioridade) return 1;
     if(((chamado*)a)->prioridade == ((chamado*)b)->prioridade) return (((chamado*)a)->tempoSimples < ((chamado*)b)->tempoSimples);
     return 0;
+}
+
+static void limparChamados(void* a){
+    free(((chamado*)a)->quantMateriaisPorItem);
+    filaLiberar(&((chamado*)a)->materiais);
+    free(a);
+}
+
+static void limparUsuarios(void* a){
+    filaLiberar(&((User*)a)->filaChamados);
+    free(a);
+}
+
+static void limparItems(void* a){
+    free(a);
+}
+
+static void limparMenus(void* a){
+    free(a);
 }
 
 /// @brief muda o valor de uma variavel de configuracao
@@ -84,16 +108,45 @@ static void initConfigVar(void){
     }
 }
 
-/// @brief Inicializa as estruturas globais do sistema 
-void initEstruturas(void){
-    estruturasGlobais.pil = criarPilha();
-    estruturasGlobais.chamadosAbertosSemPrioridade = criarFila();
-    estruturasGlobais.chamadosAbertosComPrioridade = criarFilaPrioridade(compararChamados);
-    estruturasGlobais.chamadosAndamento = criarFilaDupla();
-    estruturasGlobais.chamadosSuspensos = criarFilaDupla();
-    estruturasGlobais.chamadosConcluidos = criarFila();
-    estruturasGlobais.atendentes = arv_criar(compararUsuarios); // comparar será definido depois
-    estruturasGlobais.estoque = arv_criar(compararItems); // comparar será definido depois
+static void encontrarChamadosPorAtendente(arvNo* no){
+    if(no == NULL){
+        return;
+    }
+    noDuplo *noAtual = estruturasGlobais.chamadosAndamento->inicio;
+    while(noAtual != NULL){
+        chamado* c = (chamado*)noAtual->dado;
+        if(c->atendente != NULL && strcmp(c->atendente, ((User*)no->dado)->usuario) == 0){
+            // adicionar chamado na fila do atendente
+            filaInserir(((User*)no->dado)->filaChamados, c);
+            ((User*)no->dado)->Qchamados++;
+        }
+        noAtual = noAtual->prox;
+    }
+    encontrarChamadosPorAtendente(no->esq);
+    encontrarChamadosPorAtendente(no->dir);
+}
+
+/// @brief Inicializa as configuracoes globais do sistema 
+void initConfigs(void){
+    estruturasGlobais.pil = criarPilha(limparMenus);
+    estruturasGlobais.chamadosAbertosSemPrioridade = criarFila(limparChamados);
+    estruturasGlobais.chamadosAbertosComPrioridade = criarFilaPrioridade(compararChamados, limparChamados);
+    estruturasGlobais.chamadosAndamento = criarFilaDupla(limparChamados);
+    estruturasGlobais.chamadosSuspensos = criarFilaDupla(limparChamados);
+    estruturasGlobais.chamadosConcluidos = criarFila(limparChamados);
+    estruturasGlobais.atendentes = arv_criar(compararUsuarios, limparUsuarios); // comparar será definido depois
+    estruturasGlobais.estoque = arv_criar(compararItems, limparItems); // comparar será definido depois
 
     initConfigVar();
+    carregarEstoqueTXT();
+    carregarAtendentesTXT();
+    carregarChamados(1);
+    carregarChamados(2);
+    carregarChamados(3);
+    carregarChamados(4);
+    carregarChamados(5);
+
+    arvNo* no = estruturasGlobais.atendentes->raiz;
+    // recursivo coloca ponteiro dos chamados em cada atendente
+    encontrarChamadosPorAtendente(no);
 }

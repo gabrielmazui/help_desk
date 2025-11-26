@@ -58,9 +58,6 @@ void concluirChamado(int indice);
 // funcao para deletar chamado fechado
 void deletarChamado(int indice, int todos);
 
-// funcao para inicilar as estruturas
-void initEstruturas(void);
-
 //funcao para limpar o terminal
 void clear(void);
 

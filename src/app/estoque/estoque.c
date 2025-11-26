@@ -53,7 +53,8 @@ void carregarEstoqueTXT(void) {
 
         if (sscanf(l, "%d;%49[^;];%d;%d;",
                    &id, nome, &quantidade, &requisicoes) == 4) {
-            Item* item = malloc(sizeof(Item));
+            trim(nome);
+            Item* item = calloc(1, sizeof(Item));
             item->id = id;
             item->quantidade = quantidade;
             item->requisicoes = requisicoes;
@@ -102,8 +103,11 @@ void atualizarQuantidadeEstoque(char* itemNome, int novaQuantidade) {
     // atualiza na arvore tambem
     // buscar o item na arvore e atualizar
     Item* item;
-    item = (Item*)arv_buscar(estruturasGlobais.estoque, itemNome);
+    Item* itemTemp = malloc(sizeof(Item));
+    strcpy(itemTemp->nome, itemNome);
+    item = (Item*)arv_buscar(estruturasGlobais.estoque, itemTemp);
     item->quantidade = novaQuantidade;
+    free(itemTemp);
 }
 
 /// @brief Adiciona um novo item ao estoque

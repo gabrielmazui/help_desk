@@ -121,7 +121,7 @@ static void carregarDadosDeletarChamado(int * totalPaginas, int ***divisaoPagina
         }
         
         // preencher divisao paginas e linhas
-        (*divisaoPaginas)[paginaAtual][chamadoAtualNaPagina] = 1; // marcar que tem chamado
+        (*divisaoPaginas)[paginaAtual][chamadoAtualNaPagina] = (count > 0) ? 1 : 0; // marcar que tem chamado
         (*divisaoLinhas)[paginaAtual][chamadoAtualNaPagina + 1] = linhasAtual + 1; // marcar linha inicial do chamado
         chamadoAtualNaPagina++;
         no = no->prox;
@@ -264,18 +264,19 @@ void chamadosFechados(void){
                 terminalPequenoAlertado = 0;
             }
         }else if(k == KC_ESC){
-            popPilha(estruturasGlobais.pil);
+            menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+            free(temp); // tira o menu de atender chamado
             break;
         }else if(k == KC_UP){
             if(selected == 2 && paginaAtual == 1){
                 updateOption(4, "Deletar todos os chamados fechados", BG_BLUE, "");
                 updateOption(5, "Voltar", "", BLUE);
                 selected--;
-            }else if(selected == 3 && paginaAtual == 1){
+            }else if(selected == 3 && paginaAtual == 1 && ultimaOpcao > 3){
                 updateOption(5, "Voltar", BG_BLUE, "");
                 updateOption(6, "Sair", "", RED);
                 selected--;
-            }else if(selected == 4 && paginaAtual == 1){
+            }else if(selected == 4 && paginaAtual == 1 && ultimaOpcao > 3){
                 // desmarcar chamado
                 updateChamadoFechado(paginaAtual, selected - 3, divisaoLinhas, divisaoPaginas, 0);
                 selected--;
@@ -314,12 +315,12 @@ void chamadosFechados(void){
                 // marcar sair
                 updateOption(5, "Voltar", BG_BLUE, "");
                 selected++;
-            }else if(selected == 2 && paginaAtual == 1){
+            }else if(selected == 2 && paginaAtual == 1 ){
                 // desmarcar sair
                 updateOption(5, "Voltar", "", BLUE);
                 selected++;
                 updateOption(6, "Sair", BG_RED, "");
-            }else if(selected == 3 && paginaAtual == 1){
+            }else if(selected == 3 && paginaAtual == 1 && ultimaOpcao > 3){
                 // desmarcar sair
                 updateOption(6, "Sair", "", RED);
                 selected++;
@@ -364,7 +365,8 @@ void chamadosFechados(void){
                 break;
             }else if(paginaAtual == 1 && selected == 2){
                 // voltar
-                popPilha(estruturasGlobais.pil);
+                menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
+                free(temp); // tira o menu de atender chamado
                 lastSelected = 2;
                 break;
                 // apenas por seguranca (isso nao vai ser usado)

@@ -3,7 +3,7 @@
 
 typedef struct Item {
     int id;
-    char nome[50];
+    char nome[45];
     int quantidade;
     int requisicoes;
 } Item;
