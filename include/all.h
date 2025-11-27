@@ -48,6 +48,12 @@
 #include "app/menus/visualizar_cham/clientes.h"
 #include "app/menus/visualizar_cham/fechados.h"
 #include "app/menus/visualizar_cham/atendentes.h"
+#include "app/menus/visualizar_cham/cancelar.h"
+
+// estoque
+#include "app/menus/estoque/adicionar_item.h"
+#include "app/menus/estoque/deletar_item.h"
+#include "app/menus/estoque/atualizar_estoque.h"
 
 // menus
 #include "app/menus/login.h"

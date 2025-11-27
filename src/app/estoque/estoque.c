@@ -103,11 +103,52 @@ void atualizarQuantidadeEstoque(char* itemNome, int novaQuantidade) {
     // atualiza na arvore tambem
     // buscar o item na arvore e atualizar
     Item* item;
-    Item* itemTemp = malloc(sizeof(Item));
-    strcpy(itemTemp->nome, itemNome);
-    item = (Item*)arv_buscar(estruturasGlobais.estoque, itemTemp);
+    Item itemTemp = {0};
+    strcpy(itemTemp.nome, itemNome);
+    item = (Item*)arv_buscar(estruturasGlobais.estoque, &itemTemp);
     item->quantidade = novaQuantidade;
-    free(itemTemp);
+}
+/// @brief atualiza as requisições de um item no estoque
+/// @param itemNome nome do item a ser atualizado
+/// @param novaQuantidade novas requisições do item
+void atualizarRequisicoesEstoque(char* itemNome, int novaQuantidade) {
+    FILE* fp = fopen(ESTOQUE_FILE, "r");
+    if (!fp) return;
+
+    FILE* temp = fopen("temp.txt", "w");
+    if (!temp) {
+        fclose(fp);
+        return;
+    }
+
+    char linha[256];
+    while (fgets(linha, sizeof(linha), fp)) {
+        char nome[50];
+        int id, quantidade, requisicoes;
+
+        if (sscanf(linha, "%d;%49[^;];%d;%d;", &id, nome, &quantidade, &requisicoes) == 4) {
+            if (strcmp(nome, itemNome) == 0) {
+                // escreve a linha atualizada
+                fprintf(temp, "%d;%s;%d;%d;\n", id, nome, quantidade, novaQuantidade);
+            } else {
+                // escreve a linha original
+                fprintf(temp, "%s", linha);
+            }
+        }
+    }
+
+    fclose(fp);
+    fclose(temp);
+
+    remove(ESTOQUE_FILE);
+    rename("temp.txt", ESTOQUE_FILE);
+    // atualiza na arvore tambem
+    // buscar o item na arvore e atualizar
+    Item* item;
+    Item itemTemp = {0};
+    strcpy(itemTemp.nome, itemNome);
+    item = (Item*)arv_buscar(estruturasGlobais.estoque, &itemTemp);
+    item->requisicoes= novaQuantidade;
 }
 
 /// @brief Adiciona um novo item ao estoque
@@ -162,5 +203,10 @@ void deletarItemEstoque(char* itemNome) {
     remove(ESTOQUE_FILE);
     rename("temp.txt", ESTOQUE_FILE);
     // deletar da arvore tambem
-    arv_remover(estruturasGlobais.estoque, (void*)itemNome);
+    Item itemTemp = {0};
+    strcpy(itemTemp.nome, itemNome);
+    Item* item = (Item*)arv_remover(estruturasGlobais.estoque, &itemTemp);
+    if (item) {
+        free(item);
+    }
 }

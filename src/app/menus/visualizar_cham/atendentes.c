@@ -13,8 +13,9 @@ static void updateChamadoAndamento(int paginaAtual, int selected, int ** divisao
     int linhaInicio = divisaoLinhas[paginaAtual-1][selected - 1];
     if(linhaInicio == 0) linhaInicio = 1; // chamado nao existe
     printf("\033[%d;1H\033[K", linhaInicio); // move para linha e coluna 1 e limpa a linha
-    filaDupla* fAndamento = estruturasGlobais.chamadosAndamento;    
-    noDuplo *no = fAndamento->inicio;
+    User* u = arv_buscar(estruturasGlobais.atendentes, usuario);
+    fila* f = u->filaChamados;    
+    noFila *no = f->first;
     chamado* cham;
 
     for(int i = 0; i < paginaAtual - 1; i++){
@@ -38,24 +39,55 @@ static void updateChamadoAndamento(int paginaAtual, int selected, int ** divisao
     printf("%s| %s%-50s %s|\n"RESET, color, BLUE, (*cham).titulo, color);
     printf("\033[%d;1H\033[K", ++linhaInicio);
 
-    printf("%s| %sPrioridade: %s%-38d %s|\n", color, MAGENTA, WHITE, (*cham).prioridade, color);
+    char bufPrioridade[15] = "Maxima";
+    switch(cham->prioridade){
+        case 0:
+            strcpy(bufPrioridade, "Minima");
+            break;
+        case 1:
+            strcpy(bufPrioridade, "Muito Baixa");
+            break;
+        case 2:
+            strcpy(bufPrioridade, "Baixa");
+            break;
+        case 3:
+            strcpy(bufPrioridade, "Media");
+            break;
+        case 4:
+            strcpy(bufPrioridade, "Alta");
+            break;
+        case 5:
+            strcpy(bufPrioridade, "Urgente");
+            break;
+    }
+    printf("%s| %sPrioridade: %s%-38s %s|\n", color, MAGENTA, WHITE, bufPrioridade, color);
     printf("\033[%d;1H\033[K", ++linhaInicio);
 
-    printf("%s| %sCriador: %s%-41s %s|\n"RESET, color, MAGENTA, WHITE, (*cham).criador, color);
+    printf("%s| %sCriador: %s%-41s %s|\n"RESET, color, MAGENTA, WHITE, cham->criador, color);
     printf("\033[%d;1H\033[K", ++linhaInicio);
 
     printf("%s| %sData e Hora: %s%02d/%02d/%04d %02d:%02d:%02d%-18s %s|\n",
     color, MAGENTA, WHITE,
-    (*cham).tempoComplexo.dia, (*cham).tempoComplexo.mes, (*cham).tempoComplexo.ano,
-    (*cham).tempoComplexo.horas, (*cham).tempoComplexo.minutos, (*cham).tempoComplexo.segundos,
+    cham->tempoComplexo.dia, cham->tempoComplexo.mes, cham->tempoComplexo.ano,
+    cham->tempoComplexo.horas, cham->tempoComplexo.minutos, cham->tempoComplexo.segundos,
     "", color);
     printf("\033[%d;1H\033[K", ++linhaInicio);
+    
+    fila * fMat = cham->materiais;
+    noFila * noMat = fMat->first;
+    for(int i = 0; i < cham->quantMateriais; i++){
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "%s (%d)", ((Item*)noMat->dado)->nome, cham->quantMateriaisPorItem[i]);
+        printf("%s| %s%-50s %s|\n"RESET, color, WHITE, buffer, color);
+        printf("\033[%d;1H\033[K", ++linhaInicio);
+        noMat = noMat->prox;
+    }
 
     printf("%s| %-50s %s|\n"RESET, color, "", color);
     printf("\033[%d;1H\033[K", ++linhaInicio);
 
     char descricao[7][50] = {0};
-    int linhas = quebrarDescricao((*cham).descricao, descricao);
+    int linhas = quebrarDescricao(cham->descricao, descricao);
     // descricao
     for(int i = 0; i < linhas; i++){
         printf("%s| %s%-50s %s|\n"RESET, color, CYAN, descricao[i], color);
@@ -66,42 +98,31 @@ static void updateChamadoAndamento(int paginaAtual, int selected, int ** divisao
     
 }
 
-static void copiarUsuarioFila(filaDupla** f){
-    filaDupla* filaOrigem = estruturasGlobais.chamadosAndamento;
-    noDuplo* no = filaOrigem->inicio;
-    while(no != NULL){
-        if(strcmp(((chamado*)no->dado)->atendente, usuario.usuario) == 0){
-            filaDuplaInserir(*f, 0, no->dado);
-        }
-        no = no->prox;
-    }
-}
-
 /// @brief carregar os dados do menu de concluir chamado em andamento
 /// @param totalPaginas total de paginas
 /// @param divisaoPaginas matriz de divisao de paginas
 /// @param divisaoLinhas matriz de divisao de linhas
-static filaDupla* carregarDadosMenuConcluirChamado(int * totalPaginas, int ***divisaoPaginas, int *** divisaoLinhas){
+static void carregarDadosMenuConcluirChamado(int * totalPaginas, int ***divisaoPaginas, int *** divisaoLinhas){
     *totalPaginas = 1;
-    filaDupla* fAndamento = malloc(sizeof(filaDupla));
-    copiarUsuarioFila(&fAndamento);
-    noDuplo* no = fAndamento->inicio;
+    User* u = arv_buscar(estruturasGlobais.atendentes, usuario);
+    fila* f = u->filaChamados;
+    
+    noFila * no = f->first;
     int count = 0;
     int linhasAtual = 8; // primeira pagina tem header;
     while(no != NULL){
         chamado* cham = (chamado*)no->dado;
         // descricao
         char temp[7][50];
-        int linhasDesc = quebrarDescricao((*((chamado*)(cham))).descricao, temp);
-        linhasAtual += linhasDesc + 7; // 7 linhas fixas + linhas da desc
+        int linhasDesc = quebrarDescricao(cham->descricao, temp);
+        linhasAtual += linhasDesc + 7 + cham->quantMateriais; // 7 linhas fixas + linhas da desc
         if(linhasAtual > 40){
             (*totalPaginas)++;
-            linhasAtual = linhasDesc + 7; // resetar linhasAtual para o novo chamado
+            linhasAtual = linhasDesc + 7 + cham->quantMateriais; // resetar linhasAtual para o novo chamado
         }
         count++;
         no = no->prox;
     }
-    
     
     // alocar divisao paginas
     *divisaoPaginas = calloc(sizeof(int*), (*totalPaginas));
@@ -114,7 +135,7 @@ static filaDupla* carregarDadosMenuConcluirChamado(int * totalPaginas, int ***di
         (*divisaoLinhas)[i] = calloc(sizeof(int), 20); // 10 * 2 maximo de limites dos chamados por pagina
     }
     // preencher divisao paginas e linhas
-    no = fAndamento->inicio;
+    no = f->first;
     int paginaAtual = 0;
     int chamadoAtualNaPagina = 0;
     linhasAtual = 8; // primeira pagina tem header
@@ -124,11 +145,11 @@ static filaDupla* carregarDadosMenuConcluirChamado(int * totalPaginas, int ***di
         // descricao
         char temp[7][50];
         int linhasDesc = quebrarDescricao((*((chamado*)(cham))).descricao, temp);
-        linhasAtual += linhasDesc + 7; // 7 linhas fixas + linhas da desc
+        linhasAtual += linhasDesc + 7 + cham->quantMateriais; // 7 linhas fixas + linhas da desc
         if(linhasAtual > 40){
             // nova pagina
             paginaAtual++;
-            linhasAtual = linhasDesc + 7; // resetar linhasAtual para o novo chamado
+            linhasAtual = linhasDesc + 7 + cham->quantMateriais; // resetar linhasAtual para o novo chamado
             chamadoAtualNaPagina = 0;
         }
         
@@ -138,7 +159,7 @@ static filaDupla* carregarDadosMenuConcluirChamado(int * totalPaginas, int ***di
         chamadoAtualNaPagina++;
         no = no->prox;
     }
-    return fAndamento;
+    
 }
 
 /// @brief printar o menu de concluir chamado em andamento 
@@ -146,8 +167,11 @@ static filaDupla* carregarDadosMenuConcluirChamado(int * totalPaginas, int ***di
 /// @param totalPaginas total de paginas
 /// @param paginaAtual pagina atual
 /// @param selected chamado ou opcao selecionada
-static void printarMenuConcluirChamado(int ** divisaoPaginas, int totalPaginas, int paginaAtual, int selected, filaDupla* fAndamento){
-    noDuplo* no = fAndamento->inicio;
+static void printarMenuConcluirChamado(int ** divisaoPaginas, int totalPaginas, int paginaAtual, int selected){
+    User* u = arv_buscar(estruturasGlobais.atendentes, usuario);
+    
+    fila* f = u->filaChamados;
+    noFila* no = f->first;
     int count = 0;
     if(paginaAtual == 1){
         // primeira pagina tem 13 linhas a menos (header)
@@ -204,7 +228,7 @@ static void printarMenuConcluirChamado(int ** divisaoPaginas, int totalPaginas, 
             countPagina++;
         }
     }
-    
+
     while(divisaoPaginas[paginaAtual-1][count] > 0){
         chamado* cham = (chamado*)(no->dado);
         char * color = YELLOW;
@@ -216,7 +240,28 @@ static void printarMenuConcluirChamado(int ** divisaoPaginas, int totalPaginas, 
         printf("%s| %s%-50s %s|\n"RESET, color, BLUE, (*((chamado*)(cham))).titulo, color);
         
         // prioridade
-        printf("%s| %sPrioridade: %s%-38d %s|\n", color, MAGENTA, WHITE, (*((chamado*)(cham))).prioridade, color);
+        char bufPrioridade[15] = "Maxima";
+        switch(cham->prioridade){
+            case 0:
+                strcpy(bufPrioridade, "Minima");
+                break;
+            case 1:
+                strcpy(bufPrioridade, "Muito Baixa");
+                break;
+            case 2:
+                strcpy(bufPrioridade, "Baixa");
+                break;
+            case 3:
+                strcpy(bufPrioridade, "Media");
+                break;
+            case 4:
+                strcpy(bufPrioridade, "Alta");
+                break;
+            case 5:
+                strcpy(bufPrioridade, "Urgente");
+                break;
+        }
+        printf("%s| %sPrioridade: %s%-38s %s|\n", color, MAGENTA, WHITE, bufPrioridade, color);
         
         // criador
         printf("%s| %sCriador: %s%-41s %s|\n"RESET, color, MAGENTA, WHITE, (*((chamado*)(cham))).criador, color);
@@ -227,7 +272,17 @@ static void printarMenuConcluirChamado(int ** divisaoPaginas, int totalPaginas, 
         (*((chamado*)(cham))).tempoComplexo.dia, (*((chamado*)(cham))).tempoComplexo.mes, (*((chamado*)(cham))).tempoComplexo.ano,
         (*((chamado*)(cham))).tempoComplexo.horas, (*((chamado*)(cham))).tempoComplexo.minutos, (*((chamado*)(cham))).tempoComplexo.segundos,
         "", color);
-        
+
+        // materiais
+        fila * fMat = cham->materiais;
+        noFila * noMat = fMat->first;
+        for(int i = 0; i < cham->quantMateriais; i++){
+            char buffer[50];
+            snprintf(buffer, sizeof(buffer), "%s (%d)", ((Item*)noMat->dado)->nome, cham->quantMateriaisPorItem[i]);
+            printf("%s| %s%-50s %s|\n"RESET, color, WHITE, buffer, color);
+            noMat = noMat->prox;
+        }
+
         // linha vazia
         printf("%s| %-50s %s|\n"RESET, color, "", color);
         // descricao
@@ -249,6 +304,7 @@ static void printarMenuConcluirChamado(int ** divisaoPaginas, int totalPaginas, 
 
 /// @brief função para manipular o menu de concluir chamado em andamento
 void chamadosAtendente(void){
+    
     esperar_tamanho_minimo(42, 60);
     if(terminalPequenoAlertado){   
         terminalPequenoAlertado = 0;
@@ -257,16 +313,16 @@ void chamadosAtendente(void){
     int totalPaginas = 0;
     int ** divisaoPaginas = NULL;
     int ** divisaoLinhas = NULL;
-    filaDupla* fAndamento = carregarDadosMenuConcluirChamado(&totalPaginas, &divisaoPaginas, &divisaoLinhas);
+    carregarDadosMenuConcluirChamado(&totalPaginas, &divisaoPaginas, &divisaoLinhas);
     int paginaAtual = 1;
     int selected = 1;
 
-    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
+    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
     while(1){
         int ultimaOpcao = 0;
         if(paginaAtual == 1){
             // primeira pagina tem 2 opcoes extras (voltar e sair)
-            ultimaOpcao +=2;
+            ultimaOpcao += 2;
         }
         for(int i = 0; divisaoPaginas[paginaAtual-1][i] > 0; i++){
             ultimaOpcao++;
@@ -276,7 +332,7 @@ void chamadosAtendente(void){
             esperar_tamanho_minimo(42, 60);
             if(terminalPequenoAlertado){
                 clear();
-                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
+                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
                 terminalPequenoAlertado = 0;
             }
         }else if(k == KC_ESC){
@@ -310,7 +366,7 @@ void chamadosAtendente(void){
                     }
                     selected = ultimaOpcaoTemp;
                     clear();
-                    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
+                    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
                 }else if(selected > 1){
                     int selectedPrev = selected;
                     if(paginaAtual == 1){
@@ -339,7 +395,7 @@ void chamadosAtendente(void){
                     selected = 1;
                     paginaAtual++;
                     clear();
-                    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
+                    printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
                 }else if(selected < ultimaOpcao){
                     int selectedPrev = selected;
                     if(paginaAtual == 1){
@@ -356,14 +412,14 @@ void chamadosAtendente(void){
                 paginaAtual++;
                 selected = 1;
                 clear();
-                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
+                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
             }
         }else if(k == KC_LEFT){
             if(paginaAtual > 1){
                 paginaAtual--;
                 selected = 1;
                 clear();
-                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected, fAndamento);
+                printarMenuConcluirChamado(divisaoPaginas, totalPaginas, paginaAtual, selected);
             }
         }else if(k == KC_ENTER){
             if(paginaAtual == 1 && selected == 1){
@@ -407,12 +463,4 @@ void chamadosAtendente(void){
     }
     free(divisaoPaginas);
     free(divisaoLinhas);
-    
-    noDuplo* no = fAndamento->inicio;
-    while(no != NULL){
-        noDuplo* temp = no;
-        no = no->prox;
-        free(temp);
-    }
-    free(fAndamento);
 }

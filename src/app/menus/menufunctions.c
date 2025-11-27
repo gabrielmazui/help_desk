@@ -11,21 +11,17 @@
 /// @param opcao opcao selecionada
 static void funcaoMainExtra(int type, int opcao){
     switch(type){
-            // criar chamado
+        // criar chamado
         case 3: {
             char t[50] = "";
             char d[350] = "";
             menuCriarChamadoHandler(0, opcao, t, d, 0);
             break;
         } 
-        // case 14:
-        //     // concluir chamado em andamento
-        //     menuHandlerConcluirChamado();
-        //     break;
-        // case 18:
-        //     // deletar chamado fechado
-        //     menuHandlerDeletarChamado();
-        //     break;
+        case 7:
+            // historico
+            chamadosFechados();
+            break;
         case 21:
             // chamados cliente
             clientesChamados();
@@ -42,6 +38,22 @@ static void funcaoMainExtra(int type, int opcao){
             // chamados fechados
             chamadosFechados();
             break;
+        case 28:
+            // cancelar chamados
+            menuCancelarChamados();
+            break;
+        case 32:
+            // estoque
+            menuAtualizarEstoque();
+            break;
+        case 33:
+            // adicionar item estoque
+            menuAdicionarItemEstoque();
+            break;
+        case 34:
+            // deletar item estoque
+            menuDeletarItem();
+            break;
     }
 }
 
@@ -49,14 +61,8 @@ static void funcaoMainExtra(int type, int opcao){
 /// @param type tipo do menu
 static void conteudoExtra(int type){
     switch(type){
-        case 6:
-            // estatisticas
-            break;
-        case 8:
-            // relatorios
-            break;
-        case 9:
-            // logs
+        case 4:
+            criadorMenu();
             break;
         case 13:
             // atender proximo chamado
@@ -68,6 +74,18 @@ static void conteudoExtra(int type){
         case 19:
             // deletar chamado fechado
             menuDeletarChamadoConfirmar(lastSelected);
+            break;
+        case 29:
+            // cancelar chamado aberto
+            menuCancelarChamadoConfirmar(lastSelected, 1);
+            break;
+        case 30:
+            // cancelar chamado andamento
+            menuCancelarChamadoConfirmar(lastSelected, 2);
+            break;
+        case 31:
+            // cancelar chamado suspenso
+            menuCancelarChamadoConfirmar(lastSelected, 3);
             break;
     }
 }
@@ -107,8 +125,13 @@ menuHandler* createMenu(int type){
         case 4: // criador
             *menuReturn = (menuHandler){0};
             menuReturn->type = 4;
-            strcpy(menuReturn->titulo, "");
+            strcpy(menuReturn->titulo, "Criador");
             strcpy(menuReturn->frase, "");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Voltar";
+            menuReturn->options[1] = "Sair";
+            menuReturn->minLinhas = 35;
+            menuReturn->minColunas = 50;
             menuReturn->funcaoMain = NULL;
             menuReturn->funcaoExtra = conteudoExtra;
             break;
@@ -139,25 +162,24 @@ menuHandler* createMenu(int type){
         case 7: // Historico
             *menuReturn = (menuHandler){0};
             menuReturn->type = 7;
-            strcpy(menuReturn->titulo, "Historico de acoes");
+            strcpy(menuReturn->titulo, "");
             strcpy(menuReturn->frase, "");
-            menuReturn->quant = 3;
-            menuReturn->options[0] = "Deletar todo historico de acoes";
-            menuReturn->options[1] = "Voltar";
-            menuReturn->options[2] = "Sair";
-
-            menuReturn->minLinhas = 10;
-            menuReturn->minColunas = 40;
-            menuReturn->funcaoMain = NULL;
-            menuReturn->funcaoExtra = conteudoExtra;
+            menuReturn->funcaoMain = funcaoMainExtra;
             break;
 
         case 8: // Estoque
             *menuReturn = (menuHandler){0};
             menuReturn->type = 8;
-            strcpy(menuReturn->titulo, "");
+            strcpy(menuReturn->titulo, "Estoque");
             strcpy(menuReturn->frase, "");
-            menuReturn->funcaoMain = funcaoMainExtra;
+            menuReturn->quant = 5;
+            menuReturn->options[0] = "Atualizar estoque";
+            menuReturn->options[1] = "Adicionar novo item ao estoque";
+            menuReturn->options[2] = "Deletar item inutilizados do estoque";
+            menuReturn->options[3] = "Voltar";
+            menuReturn->options[4] = "Sair";
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = NULL;
             break;
 
         case 9: // Menu de sair
@@ -175,32 +197,32 @@ menuHandler* createMenu(int type){
             menuReturn->funcaoExtra = NULL;
             break;
 
-        case 10: // Deletar todo historico de acoes
-            *menuReturn = (menuHandler){0};
-            menuReturn->type = 10;
-            strcpy(menuReturn->titulo, "Deletar todo historico de acoes");
-            strcpy(menuReturn->frase, "Voce deseja mesmo deletar todo o historico de acoes?");
-            menuReturn->quant = 2;
-            menuReturn->options[0] = "Sim";
-            menuReturn->options[1] = "Nao";
+        // case 10: // Deletar todo historico de acoes
+        //     *menuReturn = (menuHandler){0};
+        //     menuReturn->type = 10;
+        //     strcpy(menuReturn->titulo, "Deletar todo historico de acoes");
+        //     strcpy(menuReturn->frase, "Voce deseja mesmo deletar todo o historico de acoes?");
+        //     menuReturn->quant = 2;
+        //     menuReturn->options[0] = "Sim";
+        //     menuReturn->options[1] = "Nao";
 
-            menuReturn->minLinhas = 10;
-            menuReturn->minColunas = 60;
-            menuReturn->funcaoMain = NULL;
-            menuReturn->funcaoExtra = NULL;
-            break;
+        //     menuReturn->minLinhas = 10;
+        //     menuReturn->minColunas = 25;
+        //     menuReturn->funcaoMain = NULL;
+        //     menuReturn->funcaoExtra = NULL;
+        //     break;
 
         case 11: // Deletar usuario
             *menuReturn = (menuHandler){0};
             menuReturn->type = 11;
             strcpy(menuReturn->titulo, "Deletar usuario");
-            strcpy(menuReturn->frase, "Voce deseja mesmo deletar esse usuarios?");
+            strcpy(menuReturn->frase, "Voce deseja mesmo deletar esse usuario?");
             menuReturn->quant = 2;
             menuReturn->options[0] = "Sim";
             menuReturn->options[1] = "Nao";
 
             menuReturn->minLinhas = 10;
-            menuReturn->minColunas = 60;
+            menuReturn->minColunas = 25;
             menuReturn->funcaoMain = NULL;
             menuReturn->funcaoExtra = NULL;
             break;
@@ -234,16 +256,22 @@ menuHandler* createMenu(int type){
             menuReturn->funcaoExtra = conteudoExtra;
             break;
         case 14:
-        // REPOR POR ALGUMA COISA
-            // concluir chamado em andamento
+            // cancelar chamado (nao tem chamado para cancelar)
             *menuReturn = (menuHandler){0};
             menuReturn->type = 14;
-            strcpy(menuReturn->titulo, "");
-            strcpy(menuReturn->frase, "");
-            menuReturn->funcaoMain = funcaoMainExtra;
+            strcpy(menuReturn->titulo, "Cancelar chamado");
+            strcpy(menuReturn->frase, "Nao existem chamados para cancelar no momento.");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Voltar";
+            menuReturn->options[1] = "Sair";
+
+            menuReturn->minLinhas = 10;
+            menuReturn->minColunas = 60;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = NULL;
             break;
         case 15:
-            // concluir chamado em andamente (nao tem chamados em andamento)
+            // concluir chamado em andamento (nao tem chamados em andamento)
             *menuReturn = (menuHandler){0};
             menuReturn->type = 15;
             strcpy(menuReturn->titulo, "Concluir chamado em andamento");
@@ -285,12 +313,21 @@ menuHandler* createMenu(int type){
             menuReturn->funcaoExtra = NULL;
             break;
         case 18:
-            // REPOR POR ALGUMA COISA
+            // cancelar chamado (filtro)
             *menuReturn = (menuHandler){0};
             menuReturn->type = 18;
-            strcpy(menuReturn->titulo, "");
-            strcpy(menuReturn->frase, "");
-            menuReturn->funcaoMain = funcaoMainExtra;
+            strcpy(menuReturn->titulo, "Cancelar chamado");
+            strcpy(menuReturn->frase, "Qual tipo de chamados deseja cancelar?");
+            menuReturn->quant = 5;
+            menuReturn->options[0] = "Abertos";
+            menuReturn->options[1] = "Andamento";
+            menuReturn->options[2] = "Fechados";
+            menuReturn->options[3] = "Voltar";
+            menuReturn->options[4] = "Sair";
+            menuReturn->minLinhas = 10;
+            menuReturn->minColunas = 60;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = NULL;
             break;
         case 19:
             // confirmacao de deletar chamado fechado
@@ -352,6 +389,161 @@ menuHandler* createMenu(int type){
             strcpy(menuReturn->frase, "");
             menuReturn->funcaoMain = funcaoMainExtra;
             break;
+        case 25:
+            // cancelar chamados (aberto) (nao tem)
+           *menuReturn = (menuHandler){0};
+            menuReturn->type = 25;
+            strcpy(menuReturn->titulo, "Cancelar chamado aberto");
+            strcpy(menuReturn->frase, "Nenhum chamado aberto disponivel para cancelar.");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Voltar";
+            menuReturn->options[1] = "Sair";
+            menuReturn->minLinhas = 10;
+            menuReturn->minColunas = 60;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = NULL;
+            break;
+        case 26:
+            // cancelar chamados (andamento) (nao tem)
+           *menuReturn = (menuHandler){0};
+            menuReturn->type = 26;
+            strcpy(menuReturn->titulo, "Cancelar chamado em andamento");
+            strcpy(menuReturn->frase, "Nenhum chamado em andamento disponivel para cancelar.");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Voltar";
+            menuReturn->options[1] = "Sair";
+            menuReturn->minLinhas = 10;
+            menuReturn->minColunas = 60;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = NULL;
+            break;
+        case 27:
+            // cancelar chamados (suspenso) (nao tem)
+           *menuReturn = (menuHandler){0};
+            menuReturn->type = 27;
+            strcpy(menuReturn->titulo, "Cancelar chamado suspenso");
+            strcpy(menuReturn->frase, "Nenhum chamado suspenso disponivel para cancelar.");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Voltar";
+            menuReturn->options[1] = "Sair";
+            menuReturn->minLinhas = 10;
+            menuReturn->minColunas = 60;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = NULL;
+            break;
+        case 28:
+            // cancelar chamado (tem)
+            *menuReturn = (menuHandler){0};
+            menuReturn->type = 28;
+            strcpy(menuReturn->titulo, "");
+            strcpy(menuReturn->frase, "");
+            menuReturn->funcaoMain = funcaoMainExtra;
+            break;
+        case 29:
+            // confirmar cancelar chamado (aberto)
+            *menuReturn = (menuHandler){0};
+            menuReturn->type = 29;
+            strcpy(menuReturn->titulo, "Cancelar chamado");
+            strcpy(menuReturn->frase, "Tem certeza de que deseja cancelar este chamado?");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Sim";
+            menuReturn->options[1] = "Nao";
+            menuReturn->minLinhas = 25;
+            menuReturn->minColunas = 60;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = conteudoExtra;
+            break;
+        case 30:
+            // confirmar cancelar chamado (andamento)
+            *menuReturn = (menuHandler){0};
+            menuReturn->type = 30;
+            strcpy(menuReturn->titulo, "Cancelar chamado");
+            strcpy(menuReturn->frase, "Tem certeza de que deseja cancelar este chamado?");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Sim";
+            menuReturn->options[1] = "Nao";
+            menuReturn->minLinhas = 25;
+            menuReturn->minColunas = 60;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = conteudoExtra;
+            break;
+        case 31:
+            // confirmar cancelar chamado (suspenso)
+            *menuReturn = (menuHandler){0};
+            menuReturn->type = 31;
+            strcpy(menuReturn->titulo, "Cancelar chamado");
+            strcpy(menuReturn->frase, "Tem certeza de que deseja cancelar este chamado?");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Sim";
+            menuReturn->options[1] = "Nao";
+            menuReturn->minLinhas = 25;
+            menuReturn->minColunas = 60;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = conteudoExtra;
+            break;
+        case 32:
+            // atualizar estoque
+            *menuReturn = (menuHandler){0};
+            menuReturn->type = 32;
+            strcpy(menuReturn->titulo, "");
+            strcpy(menuReturn->frase, "");
+            menuReturn->funcaoMain = funcaoMainExtra;
+            break;
+        case 33:
+            // adicionar novo item estoque
+            *menuReturn = (menuHandler){0};
+            menuReturn->type = 33;
+            strcpy(menuReturn->titulo, "");
+            strcpy(menuReturn->frase, "");
+            menuReturn->funcaoMain = funcaoMainExtra;
+            break;
+        case 34:
+            // deletar item inutilizado estoque
+            *menuReturn = (menuHandler){0};
+            menuReturn->type = 34;
+            strcpy(menuReturn->titulo, "");
+            strcpy(menuReturn->frase, "");
+            menuReturn->funcaoMain = funcaoMainExtra;
+            break;
+        case 35:
+            *menuReturn = (menuHandler){0};
+            menuReturn->type = 35;
+            strcpy(menuReturn->titulo, "Deletar item do estoque");
+            strcpy(menuReturn->frase, "Nenhum item disponivel para deletar.");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Voltar";
+            menuReturn->options[1] = "Sair";
+            menuReturn->minLinhas = 10;
+            menuReturn->minColunas = 40;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = NULL;
+            break;
+        case 36:
+            *menuReturn = (menuHandler){0};
+            menuReturn->type = 36;
+            strcpy(menuReturn->titulo, "Deletar item do estoque");
+            strcpy(menuReturn->frase, "Deseja mesmo deletar este item do estoque?");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Sim";
+            menuReturn->options[1] = "Nao";
+            menuReturn->minLinhas = 10;
+            menuReturn->minColunas = 40;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = NULL;
+            break;
+        case 37:
+            *menuReturn = (menuHandler){0};
+            menuReturn->type = 37;
+            strcpy(menuReturn->titulo, "Historico");
+            strcpy(menuReturn->frase, "Nao ha acoes no historico.");
+            menuReturn->quant = 2;
+            menuReturn->options[0] = "Voltar";
+            menuReturn->options[1] = "Sair";
+            menuReturn->minLinhas = 10;
+            menuReturn->minColunas = 40;
+            menuReturn->funcaoMain = NULL;
+            menuReturn->funcaoExtra = NULL;
+            break;
     }
     return menuReturn;
 }
@@ -361,7 +553,7 @@ void handlerMenuSelect(int type, int selected, pilha **p){
     menuHandler* m;
     switch(type){
         case 1:
-            switch(usuario.tipo){
+            switch(usuario->tipo){
                 // cliente
                 case 1:
                     switch(selected){
@@ -376,26 +568,11 @@ void handlerMenuSelect(int type, int selected, pilha **p){
                         pushPilha(*p, m);
                         break;
                     case 3:
-                        // Estatísticas
-                        m = createMenu(5);
-                        pushPilha(*p, m);
-                        break;
-                    case 4:
-                        // usuarios
-                        m = createMenu(6);
-                        pushPilha(*p, m);
-                        break;
-                    case 5:
-                        // historico
-                        m = createMenu(7);
-                        pushPilha(*p, m);
-                        break;
-                    case 6:
                         // criador
                         m = createMenu(4);
                         pushPilha(*p, m);
                         break;
-                    case 7:
+                    case 4:
                         // sair
                         m = createMenu(9);
                         pushPilha(*p, m);
@@ -411,26 +588,11 @@ void handlerMenuSelect(int type, int selected, pilha **p){
                         pushPilha(*p, m);
                         break;
                     case 2:
-                        // Estatísticas
-                        m = createMenu(5);
-                        pushPilha(*p, m);
-                        break;
-                    case 3:
-                        // usuarios
-                        m = createMenu(6);
-                        pushPilha(*p, m);
-                        break;
-                    case 4:
-                        // historico
-                        m = createMenu(7);
-                        pushPilha(*p, m);
-                        break;
-                    case 5:
                         // criador
                         m = createMenu(4);
                         pushPilha(*p, m);
                         break;
-                    case 6:
+                    case 3:
                         // sair
                         m = createMenu(9);
                         pushPilha(*p, m);
@@ -453,26 +615,20 @@ void handlerMenuSelect(int type, int selected, pilha **p){
                         pushPilha(*p, m);
                         break;
                     case 3:
-                        // Estatísticas
-                        m = createMenu(5);
+                        // historico
+                        if(estruturasGlobais.chamadosConcluidos->n > 0){
+                            m = createMenu(7);
+                        } else {
+                            m = createMenu(37); // menu de historico vazio
+                        }
                         pushPilha(*p, m);
                         break;
                     case 4:
-                        // usuarios
-                        m = createMenu(6);
-                        pushPilha(*p, m);
-                        break;
-                    case 5:
-                        // historico
-                        m = createMenu(7);
-                        pushPilha(*p, m);
-                        break;
-                    case 6:
                         // criador
                         m = createMenu(4);
                         pushPilha(*p, m);
                         break;
-                    case 7:
+                    case 5:
                         // sair
                         m = createMenu(9);
                         pushPilha(*p, m);
@@ -505,56 +661,54 @@ void handlerMenuSelect(int type, int selected, pilha **p){
                 
             }
             break;
-        case 5:
-            // Estatísticas
+        
+        case 4:
+            // criador
             switch(selected){
                 // voltar e sair 
                 case 1:
                     {
-                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        menuHandler* temp = (menuHandler*)popPilha(*p);
                         free(temp);
                     }
                     break;
                 case 2:
-                    pushPilha(*p, createMenu(10));
-                    break;
-            }
-            break;
-        case 7:
-            // relatorios
-            switch(selected){
-                case 1:
-                    // menu de deletar todos relatorios
-                    pushPilha(*p, createMenu(11));
-                    break;
-                case 2: 
-                    // voltar
-                    {
-                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
-                        free(temp);
-                    }
-                    break;
-                case 3:
-                    // sair
                     pushPilha(*p, createMenu(10));
                     break;
             }
             break;
         case 8:
-            // logs
+            // estoque
             switch(selected){
                 case 1:
-                    // deletar todos os logs
-                    pushPilha(*p, createMenu(12));
+                    // atualizar estoque
+                    pushPilha(*p, createMenu(32));
                     break;
                 case 2:
+                    // adicionar novo item ao estoque
+                    pushPilha(*p, createMenu(33));
+                    break;
+                case 3:
+                    {
+                        // deletar item inutilizados do estoque
+                        int q = existeItemDeletavel(estruturasGlobais.estoque); // funcao que verifica se ha itens para deletar
+                        if(q == 0){
+                            // nao ha itens para deletar
+                            pushPilha(*p, createMenu(35));
+                        } else {
+                            pushPilha(*p, createMenu(34));
+                        }
+                        break;
+                    }
+                    
+                case 4:
                     //voltar
                     {
                         menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
                         free(temp);
                     }
                     break;
-                case 3:
+                case 5:
                     // sair
                     pushPilha(*p, createMenu(10));
                     break;
@@ -655,6 +809,22 @@ void handlerMenuSelect(int type, int selected, pilha **p){
                     break;
             }
             break;
+        case 14:
+            // cancelar chamado (nao tem chamado para cancelar)
+            switch(selected){
+                case 1:
+                    // voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                    }
+                    break;
+                case 2:
+                    // sair
+                    pushPilha(*p, createMenu(9));;
+                    break;
+            }
+            break;
         case 15:
             // concluir chamado em andamento (nao tem chamados em andamento)
             switch(selected){
@@ -693,7 +863,7 @@ void handlerMenuSelect(int type, int selected, pilha **p){
                     }
             }
             break;
-            case 17:
+        case 17:
             // deletar chamado fechado (nao tem chamados fechados)
             switch(selected){
                 case 1:
@@ -709,7 +879,44 @@ void handlerMenuSelect(int type, int selected, pilha **p){
                     break;
             }
             break;
-            case 19:
+        case 18:
+            // cancelar chamado (filtro)
+            switch(selected){
+                case 1:
+                // abertos
+                    if(estruturasGlobais.chamadosAbertosComPrioridade->n > 0 || estruturasGlobais.chamadosAbertosSemPrioridade->n > 0)
+                        pushPilha(*p, createMenu(28));
+                    else
+                        pushPilha(*p, createMenu(25));
+                    break;
+                case 2:
+                // andamento
+                    if(estruturasGlobais.chamadosAndamento->n > 0)
+                        pushPilha(*p, createMenu(28));
+                    else
+                        pushPilha(*p, createMenu(26));
+                    break;
+                case 3:
+                // suspensos
+                    if(estruturasGlobais.chamadosSuspensos->n > 0)
+                        pushPilha(*p, createMenu(28));
+                    else
+                        pushPilha(*p, createMenu(27));
+                    break;
+                case 4:
+                    // voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                        break;
+                    }
+                case 5:
+                    // sair
+                    pushPilha(*p, createMenu(9));
+                    break;
+            }
+            break;
+        case 19:
             // confirmacao de deletar chamado fechado
             switch(selected){
                 case 1:
@@ -731,26 +938,202 @@ void handlerMenuSelect(int type, int selected, pilha **p){
                     }
             }
             break;
-            case 20:
-                // confirmacao de deletar todos chamados fechados
-                switch(selected){
-                    case 1:
-                        // deletar todos chamados fechados
-                        {
-                            deletarChamado(-1, 1);
-                            menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
-                            free(temp); // tira o menu de confirmacao
-                            menuHandler* temp2 = (menuHandler*)popPilha(*p); // tira o menu de deletar chamado
-                            free(temp2); // tira o menu de deletar chamado
-                        }
+        case 20:
+            // confirmacao de deletar todos chamados fechados
+            switch(selected){
+                case 1:
+                    // deletar todos chamados fechados
+                    {
+                        deletarChamado(-1, 1);
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp); // tira o menu de confirmacao
+                        menuHandler* temp2 = (menuHandler*)popPilha(*p); // tira o menu de deletar chamado
+                        free(temp2); // tira o menu de deletar chamado
+                    }
+                    break;
+                case 2:
+                    // nao deletar, voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                        
+                    }
+                    break;
+            }
+            break;
+        case 25:
+            // cancelar chamados (aberto) (nao tem)
+            switch(selected){
+                case 1:
+                    // voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                    }
+                    break;
+                case 2:
+                    // sair
+                    pushPilha(*p, createMenu(9));
+                    break;
+            }
+            break;
+        case 26:
+            // cancelar chamados (andamento) (nao tem)
+            switch(selected){
+                case 1:
+                    // voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                    }
+                    break;
+                case 2:
+                    // sair
+                    pushPilha(*p, createMenu(9));
+                    break;
+            }
+            break;
+        case 27:
+            // cancelar chamados (suspenso) (nao tem)
+            switch(selected){
+                case 1:
+                    // voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                    }
+                    break;
+                case 2:
+                    // sair
+                    pushPilha(*p, createMenu(9));
+                    break;
+            }
+            break;
+        case 29:
+            // confirmar cancelar chamado (aberto)
+            switch(selected){
+                case 1:
+                    // cancelar chamado aberto
+                    {
+                        cancelarChamado(lastSelected , 1);
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp); // tira o menu de confirmacao
+                        menuHandler* temp2 = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp2); // tira o menu de cancelar chamado
+                        menuHandler* temp3 = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp3); // tira o menu de cancelar chamado (filtro)
+                    }
+                    break;
+                case 2:
+                    // nao cancelar, voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
                         break;
-                    case 2:
-                        // nao deletar, voltar
-                        {
-                            menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
-                            free(temp);
-                            break;
-                        }
-                }
+                    }
+            }
+            break;
+        case 30:
+            // confirmar cancelar chamado (andamento)
+            switch(selected){
+                case 1:
+                    // cancelar chamado andamento
+                    {
+                        cancelarChamado(lastSelected , 2);
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp); // tira o menu de confirmacao
+                        menuHandler* temp2 = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp2); // tira o menu de cancelar chamado
+                        menuHandler* temp3 = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp3); // tira o menu de cancelar chamado (filtro)
+                    }
+                    break;
+                case 2:
+                    // nao cancelar, voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                        break;
+                    }
+            }
+            break;
+        case 31:
+            // confirmar cancelar chamado (suspenso)
+            switch(selected){
+                case 1:
+                    // cancelar chamado suspenso
+                    {
+                        cancelarChamado(lastSelected , 3);
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp); // tira o menu de confirmacao
+                        menuHandler* temp2 = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp2); // tira o menu de cancelar chamado
+                        menuHandler* temp3 = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp3); // tira the menu de cancelar chamado (filtro)
+                    }
+                    break;
+                case 2:
+                    // nao cancelar, voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                        break;
+                    }
+            }
+            break;
+        case 35:
+            // deletar item inutilizado estoque
+            switch(selected){
+                case 1:
+                    // voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                    }
+                    break;
+                case 2:
+                    // sair
+                    pushPilha(*p, createMenu(9));
+                    break;
+            }
+            break;
+        case 36:
+            // confirmar deletar item estoque
+            switch(selected){
+                case 1:
+                    // deletar item do estoque
+                    {
+                        deletarItemChamadoEstoque(lastSelected);
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp); // tira o menu de confirmacao
+                        menuHandler* temp2 = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp2); // tira o menu de deletar item do estoque
+                    }
+                    break;
+                case 2:
+                    // nao deletar, voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                        break;
+                    }
+            }
+            break;
+        case 37:
+            // historico vazio
+            switch(selected){
+                case 1:
+                    // voltar
+                    {
+                        menuHandler* temp = (menuHandler*)popPilha(*p); // tira o menu de atender chamado
+                        free(temp);
+                    }
+                    break;
+                case 2:
+                    // sair
+                    pushPilha(*p, createMenu(9));
+                    break;
+            }
+            break;
     }
 }

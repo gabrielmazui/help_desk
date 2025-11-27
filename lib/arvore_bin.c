@@ -138,3 +138,38 @@ void arv_liberar(arvoreBinaria** arv) {
     free(*arv);
     *arv = NULL;
 }
+
+// essas funcoes sao usadas para reconstruir a arvore inteira
+/// @brief Insere todos os nós de uma árvore em outra
+/// @param no Nó atual da árvore original
+/// @param nova Nova árvore onde os nós serão inseridos
+static void inserirTodosRec(arvNo* no, arvoreBinaria* nova) {
+    if (!no) return;
+    inserirTodosRec(no->esq, nova);
+    arv_inserir(nova, no->dado);
+    inserirTodosRec(no->dir, nova);
+}
+
+/// @brief Reconstrói a árvore binária para balanceá-la
+static void liberarNosRec(arvNo* no) {
+    if (!no) return;
+    liberarNosRec(no->esq);
+    liberarNosRec(no->dir);
+    free(no);
+}
+
+/// @brief Reconstrói a árvore binária para balanceá-la
+/// @param arv Ponteiro para a árvore a ser reconstruída
+void arv_reconstruir_total(arvoreBinaria** arv) {
+    if (!arv || !*arv) return;
+
+    arvoreBinaria* antiga = *arv;
+    arvoreBinaria* nova = arv_criar(antiga->comparar, antiga->liberar);
+
+    inserirTodosRec(antiga->raiz, nova);
+
+    liberarNosRec(antiga->raiz);
+    free(antiga);
+
+    *arv = nova;
+}

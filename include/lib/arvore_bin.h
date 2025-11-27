@@ -23,4 +23,6 @@ void* arv_buscar(arvoreBinaria* arv, void* chave);
 
 void arv_liberar(arvoreBinaria** arv);
 
+void arv_reconstruir_total(arvoreBinaria** arv);
+
 #endif

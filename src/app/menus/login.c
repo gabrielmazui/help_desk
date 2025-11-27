@@ -116,6 +116,7 @@ void login(int codigoErro){
     }
     clear();
     carregamentoAnimacao();
-    usuario = u; // salvar o usuario logado na variavel global
+    usuario = malloc(sizeof(User));
+    *usuario = u; // salvar o usuario logado na variavel global
     mainMenu();
 }

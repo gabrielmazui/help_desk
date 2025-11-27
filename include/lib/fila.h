@@ -29,4 +29,5 @@ void* filaRetirarIndice(fila * f, int indice);
 // liberar fila
 void filaLiberar(fila ** f);
 
+void* filaRemoverIndice(fila* f, int indice);
 #endif

@@ -19,8 +19,10 @@ extern int chamadoIdCounter; // contador de IDs para chamados
 
 extern int itemIdCounter; // contador de IDs para itens do estoque
 
+extern int tipoDeMenuVariavel; // variavel global para indicar o tipo de menu que precisa ser guardado
+
 // usuario logado atualmente
-extern User usuario; 
+extern User* usuario; 
 
 // forward declaration
 typedef struct Estruturas Estruturas;

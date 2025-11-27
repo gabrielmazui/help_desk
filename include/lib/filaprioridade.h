@@ -26,4 +26,6 @@ filaPrioridade* filaPrioridadeCopiar(filaPrioridade* original);
 // liberar fila de prioridade
 void filaPrioridadeLiberar(filaPrioridade** f);
 
+void* filaPrioridadeRemoverIndice(filaPrioridade* f, int idx);
+
 #endif

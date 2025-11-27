@@ -7,4 +7,7 @@ void menuConcluirChamadoConfirmar(int indiceChamado);
 
 void menuDeletarChamadoConfirmar(int indiceChamado);
 
+void menuCancelarChamadoConfirmar(int indiceChamado, int tipo);
+
+void criadorMenu(void);
 #endif 

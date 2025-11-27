@@ -222,7 +222,6 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             linhaAtualAndamento++;
         }
         
-        fflush(stdout);
         if (fdUsed < fdQuant && atualFilaFechado) {
             matrizFechado[linhaAtualFechado][0] = '1'; // marca como titulo
             snprintf(matrizFechado[linhaAtualFechado] + 1, TAM_LINHA - 1, "%s", (*((chamado*)atualFilaFechado->dado)).titulo);
@@ -388,8 +387,14 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
         // ========================================================
         // APENAS PARA ANDAMENTO
 
+        if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
+            matrizAberto[linhaAtualAberto][0] = '\0';
+        }
         if (*linhasAndamento > 0 && linhaAtualAndamento < *linhasAndamento) {
             matrizAndamento[linhaAtualAndamento][0] = '\0';
+        }
+        if (*linhasFechado > 0 && linhaAtualFechado < *linhasFechado) {
+            matrizFechado[linhaAtualFechado][0] = '\0';
         }
 
         if (fAndamentoUsed < fAndamentoQuant && atualFilaAndamento) {
@@ -510,7 +515,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
             }
         }
 
-        // =============== LINHA VAZIA ==========================================
+        // =============== LINHA VAZIA ========================================
         if (*linhasAberto > 0 && linhaAtualAberto < *linhasAberto) {
             matrizAberto[linhaAtualAberto][0] = '\0';
         }
@@ -639,7 +644,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     // ------------------ ABERTO ------------------
     linhasNaPagina = 0;
     for (int i = 0; i < fQuant + fpQuant; i++) {
-        int limite = (paginasAberto == 1) ? 29 : 40;
+        int limite = (paginasAberto == 1) ? 28 : 40;
         linhasNaPagina += linhasPorChamadoAberto[i];
         if (linhasNaPagina > limite) {
             paginasAberto++;
@@ -650,7 +655,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     // ------------------ ANDAMENTO ------------------
     linhasNaPagina = 0;
     for (int i = 0; i < fAndamentoQuant; i++) {
-        int limite = (paginasAndamento == 1) ? 29 : 40;
+        int limite = (paginasAndamento == 1) ? 28 : 40;
         linhasNaPagina += linhasPorChamadoAndamento[i];
         if (linhasNaPagina > limite) {
             paginasAndamento++;
@@ -661,7 +666,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     // ------------------ FECHADO ------------------
     linhasNaPagina = 0;
     for (int i = 0; i < fdQuant; i++) {
-        int limite = (paginasFechado == 1) ? 29 : 40;
+        int limite = (paginasFechado == 1) ? 28 : 40;
         linhasNaPagina += linhasPorChamadoFechado[i];
         if (linhasNaPagina > limite) {
             paginasFechado++;
@@ -688,7 +693,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     int linhasAbsolutas = 0;
     (*divisaoLinhas)[0][0] = 0;
     for (int i = 0; i < (fQuant + fpQuant); i++) {
-        int limite = (paginasAberto == 1) ? 29 : 40;
+        int limite = (paginasAberto == 1) ? 28 : 40;
         linhasNaPagina += linhasPorChamadoAberto[i];
         linhasAbsolutas += linhasPorChamadoAberto[i];
         if (linhasNaPagina > limite && paginasAberto <= *totalPaginas) {
@@ -704,7 +709,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     linhasAbsolutas = 0;
     (*divisaoLinhas)[1][0] = 0;
     for (int i = 0; i < fAndamentoQuant; i++) {
-        int limite = (paginasAndamento == 1) ? 29 : 40;
+        int limite = (paginasAndamento == 1) ? 28 : 40;
         linhasNaPagina += linhasPorChamadoAndamento[i];
         linhasAbsolutas += linhasPorChamadoAndamento[i];
         if (linhasNaPagina > limite && paginasAndamento <= *totalPaginas) {
@@ -720,7 +725,7 @@ static void carregarBufferChamados(char ***buf1, char ***buf2, char ***buf3, int
     linhasAbsolutas = 0;
     (*divisaoLinhas)[2][0] = 0;
     for (int i = 0; i < fdQuant; i++) {
-        int limite = (paginasFechado == 1) ? 29 : 40;
+        int limite = (paginasFechado == 1) ? 28 : 40;
         linhasNaPagina += linhasPorChamadoFechado[i];
         linhasAbsolutas += linhasPorChamadoFechado[i];
         if (linhasNaPagina > limite && paginasFechado <= *totalPaginas) {
@@ -766,7 +771,7 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
     if(linhas3 > maxLinhasBuffers) maxLinhasBuffers = linhas3;
 
     if(paginaAtual == 1){
-        // primeira pagina tem 11 linhas a menos (header)
+        // primeira pagina tem 12 linhas a menos (header)
         char* titulo = "Visualizar Chamados";
         repetirChar(15, '-', BLUE);
         printf(BLUE"%s"RESET, titulo);
@@ -779,12 +784,13 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
         char* fundoSelecaoSair = BG_RED;
 
         // printar opcoes
-        char* opcoes[3] = {
+        char* opcoes[4] = {
             "Atender proximo chamado",
+            "Cancelar Chamado",
             "Voltar",
             "Sair"
         };
-        for(int i = 1; i <= 3; i++){
+        for(int i = 1; i <= 4; i++){
             if(i == selected){
                 if(i == 3){
                     // sair
@@ -793,7 +799,7 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
                     printf(" %s%s\n"RESET, fundoSelecaoNormal, opcoes[i-1]);
                 }
             } else {
-                if(i == 3){
+                if(i == 4){
                     // sair
                     printf(" %s%s\n"RESET, corTextoSair, opcoes[i-1]);
                 } else {
@@ -826,7 +832,7 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
     int fimLinhaFechado = divisaoLinhas[2][paginaAtual];
 
     
-    int fimLoop = (paginaAtual == 1) ? 40 - 11 : 40; // primeira pagina tem 11 linhas a menos (header)
+    int fimLoop = (paginaAtual == 1) ? 40 - 12 : 40; // primeira pagina tem 12 linhas a menos (header)
     for(int i = 0; i < fimLoop; i++){
 
         // imprimir linha
@@ -866,7 +872,6 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
                 // titulo
                 printf("%s| %s%-50s %s|"RESET, GREEN, BLUE, buf1[i1] + 1, GREEN);
                 break;
-
             case '2':
                 // prioridade
                 printf("%s| %sPrioridade: %s%-38s %s|"RESET, GREEN, MAGENTA, WHITE, buf1[i1] + 1, GREEN);
@@ -875,7 +880,7 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
                 // criador
                 printf("%s| %sCriador: %s%-41s %s|"RESET, GREEN, MAGENTA, WHITE, buf1[i1] + 1, GREEN);
                 break;
-            case 4:
+            case '4':
                 // atendente
                 printf("%s| %sAtendente: %s%-39s %s|"RESET, GREEN, MAGENTA, WHITE, buf1[i1] + 1, GREEN);
                 break;
@@ -911,32 +916,32 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
                 break;
             case '1':
                 // titulo
-                printf("%s| %s%-50s %s|"RESET, YELLOW, BLUE, buf1[i1] + 1, YELLOW);
+                printf("%s| %s%-50s %s|"RESET, YELLOW, BLUE, buf2[i2] + 1, YELLOW);
                 break;
 
             case '2':
                 // prioridade
-                printf("%s| %sPrioridade: %s%-38s %s|"RESET, YELLOW, MAGENTA, WHITE, buf1[i1] + 1, YELLOW);
+                printf("%s| %sPrioridade: %s%-38s %s|"RESET, YELLOW, MAGENTA, WHITE, buf2[i2] + 1, YELLOW);
                 break;
             case '3':
                 // criador
-                printf("%s| %sCriador: %s%-41s %s|"RESET, YELLOW, MAGENTA, WHITE, buf1[i1] + 1, YELLOW);
+                printf("%s| %sCriador: %s%-41s %s|"RESET, YELLOW, MAGENTA, WHITE, buf2[i2] + 1, YELLOW);
                 break;
-            case 4:
+            case '4':
                 // atendente
-                printf("%s| %sAtendente: %s%-39s %s|"RESET, YELLOW, MAGENTA, WHITE, buf1[i1] + 1, YELLOW);
+                printf("%s| %sAtendente: %s%-39s %s|"RESET, YELLOW, MAGENTA, WHITE, buf2[i2] + 1, YELLOW);
                 break;
             case '5':
                 // data e hora
-                printf("%s| %sData e Hora: %s%-37s %s|"RESET, YELLOW, MAGENTA, WHITE, buf1[i1] + 1, YELLOW);
+                printf("%s| %sData e Hora: %s%-37s %s|"RESET, YELLOW, MAGENTA, WHITE, buf2[i2] + 1, YELLOW);
                 break;
             case '6':
                 // materiais
-                printf("%s| %s%-50s %s|"RESET, YELLOW, WHITE, buf1[i1] + 1, YELLOW);
+                printf("%s| %s%-50s %s|"RESET, YELLOW, WHITE, buf2[i2] + 1, YELLOW);
                 break;
             case '7':
                 // descricao
-                printf("%s| %s%-50s %s|"RESET, YELLOW, CYAN, buf1[i1] + 1, YELLOW);
+                printf("%s| %s%-50s %s|"RESET, YELLOW, CYAN, buf2[i2] + 1, YELLOW);
                 break;
             case '8':
                 // separador
@@ -958,32 +963,32 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
                 break;
             case '1':
                 // titulo
-                printf("%s| %s%-50s %s|"RESET, RED, BLUE, buf1[i1] + 1, RED);
+                printf("%s| %s%-50s %s|"RESET, RED, BLUE, buf3[i3] + 1, RED);
                 break;
 
             case '2':
                 // prioridade
-                printf("%s| %sPrioridade: %s%-38s %s|"RESET, RED, MAGENTA, WHITE, buf1[i1] + 1, RED);
+                printf("%s| %sPrioridade: %s%-38s %s|"RESET, RED, MAGENTA, WHITE, buf3[i3] + 1, RED);
                 break;
             case '3':
                 // criador
-                printf("%s| %sCriador: %s%-41s %s|"RESET, RED, MAGENTA, WHITE, buf1[i1] + 1, RED);
+                printf("%s| %sCriador: %s%-41s %s|"RESET, RED, MAGENTA, WHITE, buf3[i3] + 1, RED);
                 break;
-            case 4:
+            case '4':
                 // atendente
-                printf("%s| %sAtendente: %s%-39s %s|"RESET, RED, MAGENTA, WHITE, buf1[i1] + 1, RED);
+                printf("%s| %sAtendente: %s%-39s %s|"RESET, RED, MAGENTA, WHITE, buf3[i3] + 1, RED);
                 break;
             case '5':
                 // data e hora
-                printf("%s| %sData e Hora: %s%-37s %s|"RESET, RED, MAGENTA, WHITE, buf1[i1] + 1, RED);
+                printf("%s| %sData e Hora: %s%-37s %s|"RESET, RED, MAGENTA, WHITE, buf3[i3] + 1, RED);
                 break;
             case '6':
                 // materiais
-                printf("%s| %s%-50s %s|"RESET, RED, WHITE, buf1[i1] + 1, RED);
+                printf("%s| %s%-50s %s|"RESET, RED, WHITE, buf3[i3] + 1, RED);
                 break;
             case '7':
                 // descricao
-                printf("%s| %s%-50s %s|"RESET, RED, CYAN, buf1[i1] + 1, RED);
+                printf("%s| %s%-50s %s|"RESET, RED, CYAN, buf3[i3] + 1, RED);
                 break;
             case '8':
                 // separador
@@ -998,7 +1003,7 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
         fflush(stdout);
     }
     printf("\n");
-    if(selected == 4){
+    if(selected == 5){
         // pagina selecionada
         printf(BG_BLUE" <- Pagina %d/%d ->"RESET, paginaAtual, totalPaginas);
     } else {
@@ -1009,8 +1014,9 @@ static void printarBufferChamados(int **divisaoLinhas, char **buf1, char **buf2,
 
 /// @brief menu para visualizar chamados
 void chamadosAdmins(void){
-    char* opcoes[3] = {
+    char* opcoes[4] = {
             "Atender proximo chamado",
+            "Cancelar Chamado",
             "Voltar",
             "Sair"
         };
@@ -1053,48 +1059,48 @@ void chamadosAdmins(void){
         }
         if(paginaAtual == 1){
            if(k == KC_DOWN){
-                if(selected < 4){  // máximo 4 opções
+                if(selected < 5){  // máximo 5 opções
                     // desmarcar opção atual
-                    updateOption(selected + 2, opcoes[selected-1], "", (selected == 3 ? RED : BLUE));
+                    updateOption(selected + 2, opcoes[selected-1], "", (selected == 4 ? RED : BLUE));
                     selected++;
                     // marcar opção nova
-                    if(selected == 4){
+                    if(selected == 5){
                         // pagina
                         char fimPaginaStr[20];
                         snprintf(fimPaginaStr, 20, "<- Pagina %d/%d ->", paginaAtual, totalPaginas);
                         updateOption(42, fimPaginaStr, BG_BLUE, "");
                     } else {
-                        updateOption(selected + 2, opcoes[selected-1], (selected == 5 ? BG_RED : BG_BLUE), "");
+                        updateOption(selected + 2, opcoes[selected-1], (selected == 4 ? BG_RED : BG_BLUE), "");
                     }
                 }
             }else if(k == KC_UP){
                 if(selected > 1){
                     // desmarcar opção atual
-                    if(selected == 4){
+                    if(selected == 5){
                         char fimPaginaStr[20];
                         snprintf(fimPaginaStr, 20, "<- Pagina %d/%d ->", paginaAtual, totalPaginas);
                         updateOption(42, fimPaginaStr, "", BLUE);
                     } else {
-                        updateOption(selected + 2, opcoes[selected-1], "", (selected == 3 ? RED : BLUE));
+                        updateOption(selected + 2, opcoes[selected-1], "", (selected == 4 ? RED : BLUE));
                     }
                     selected--;
                     // marcar opção nova
-                    updateOption(selected + 2, opcoes[selected-1], (selected == 3 ? BG_RED : BG_BLUE), "");
+                    updateOption(selected + 2, opcoes[selected-1], (selected == 4 ? BG_RED : BG_BLUE), "");
                 }
             
-            }else if(k == KC_RIGHT && selected == 4){
+            }else if(k == KC_RIGHT && selected == 5){
                 if(paginaAtual < totalPaginas){
                     paginaAtual++;
                     clear();
                     printarBufferChamados(divisaoLinhas, matrizAberto, matrizAndamento, matrizFechado, linhasAberto, linhasAndamento, linhasFechado, paginaAtual, totalPaginas, selected);
                 }
-            }else if(k == KC_LEFT && selected == 4){
+            }else if(k == KC_LEFT && selected == 5){
                 if(paginaAtual > 1){
                     paginaAtual--;
                     clear();
                     printarBufferChamados(divisaoLinhas, matrizAberto, matrizAndamento, matrizFechado, linhasAberto, linhasAndamento, linhasFechado, paginaAtual, totalPaginas, selected);
                 }
-            }else if(k == KC_ENTER && selected < 4){
+            }else if(k == KC_ENTER && selected < 5){
                 if(selected == 1){
                     // atendender proximo chamado
                     if(linhasAberto == 0){
@@ -1108,11 +1114,23 @@ void chamadosAdmins(void){
                         break;
                     }
                 }else if(selected == 2){
+                    // cancelar chamado
+                    if(linhasAberto == 0 && linhasAndamento == 0 && linhasFechado == 0){
+                        // nao ha chamados para cancelar
+                        menuHandler* m = createMenu(14);
+                        pushPilha(estruturasGlobais.pil, m);
+                        break;
+                    } else {
+                        menuHandler* m = createMenu(18);
+                        pushPilha(estruturasGlobais.pil, m);
+                        break;
+                    }
+                }else if(selected == 3){
                     // voltar
                     menuHandler* temp = (menuHandler*)popPilha(estruturasGlobais.pil); // tira o menu de atender chamado
                     free(temp); // tira o menu de atender chamado
                     break;
-                }else if(selected == 3){
+                }else if(selected == 4){
                     // sair
                     menuHandler* m = createMenu(9);
                     pushPilha(estruturasGlobais.pil, m);

@@ -7,5 +7,6 @@ void carregarEstoqueTXT(void);
 void atualizarQuantidadeEstoque(char* itemNome, int novaQuantidade);
 void adicionarItemEstoque(Item* novoItem);
 void deletarItemEstoque(char* itemNome);
+void atualizarRequisicoesEstoque(char* itemNome, int novaQuantidade);
 
 #endif

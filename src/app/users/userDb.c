@@ -183,7 +183,13 @@ void carregarAtendentesTXT(void){
                 novoAtendente->criacao.horas = horas;
                 novoAtendente->criacao.minutos = minutos;
                 novoAtendente->criacao.segundos = segundos;
-
+                novoAtendente->Qchamados = 0;
+                novoAtendente->filaChamados = criarFila(NULL);
+                if(strcmp(novoAtendente->usuario, usuario->usuario) == 0){
+                    usuario = novoAtendente;
+                    // ponteiro para a fila de chamados do usuario logado
+                }
+                // null pois a fila sera preenchida com ponteiros que serao liberados em outro lugar
                 arv_inserir(estruturasGlobais.atendentes, novoAtendente);
             }
         }

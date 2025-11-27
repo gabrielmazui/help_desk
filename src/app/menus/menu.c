@@ -139,43 +139,43 @@ void mainMenu(void){
     menu1->minColunas = 80;
     menu1->funcaoMain = NULL;
     menu1->funcaoExtra = NULL;
-    char* options1[] = {"Criar chamado", "Visualizar os meus chamados", "Estatisticas", "Historico", "Usuarios", "Criador", "Sair"};
-    char* options2[] = {"Visualizar os meus chamados", "Estatisticas", "Historico", "Usuarios", "Criador", "Sair"};
-    char* options3[] = {"Visualizar chamados", "Estoque", "Estatisticas", "Historico", "Usuarios", "Criador", "Sair"};
-    char* options4[] = {"Visualizar chamados", "Estoque", "Estatisticas", "Historico", "Usuarios", "Criador", "Sair"};
-    char* options5[] = {"Visualizar chamados", "Estoque", "Estatisticas", "Historico", "Usuarios", "Criador", "Sair"};
-    switch(usuario.tipo){
+    char* options1[] = {"Criar chamado", "Visualizar os meus chamados", "Criador", "Sair"};
+    char* options2[] = {"Visualizar os meus chamados", "Criador", "Sair"};
+    char* options3[] = {"Visualizar chamados", "Estoque",  "Historico", "Criador", "Sair"};
+    char* options4[] = {"Visualizar chamados", "Estoque", "Historico", "Criador", "Sair"};
+    char* options5[] = {"Visualizar chamados", "Estoque", "Historico", "Criador", "Sair"};
+    switch(usuario->tipo){
         case 1:
             // cliente
-            menu1->quant = 7;
+            menu1->quant = 4;
             for(int i = 0; i < menu1->quant; i++){
                 menu1->options[i] = options1[i];
             }
             break;
         case 2:
             // tecnico
-            menu1->quant = 6;
+            menu1->quant = 3;
             for(int i = 0; i < menu1->quant; i++){
                 menu1->options[i] = options2[i];
             }
             break;
         case 3:
             // gerente
-            menu1->quant = 7;
+            menu1->quant = 5;
             for(int i = 0; i < menu1->quant; i++){
                 menu1->options[i] = options3[i];
             }
             break;
         case 4:
             // admin
-            menu1->quant = 7;
+            menu1->quant = 5;
             for(int i = 0; i < menu1->quant; i++){
                 menu1->options[i] = options4[i];
             }
             break;
         case 5:
             // criador
-            menu1->quant = 7;
+            menu1->quant = 5;
             for(int i = 0; i < menu1->quant; i++){
                 menu1->options[i] = options5[i];
             }
@@ -236,6 +236,9 @@ void mainMenu(void){
             if(p == NULL){
                 // se a pilha estiver vazia, sair do loop
                 break;
+            }
+            if(menuEscolhido->type == 18){
+                tipoDeMenuVariavel = selected;
             }
             lastSelected = selected;
             selected = 1;
@@ -314,7 +317,6 @@ void mainMenu(void){
             }
         }
     }
-   
     filaPrioridadeLiberar(&estruturasGlobais.chamadosAbertosComPrioridade);
     filaLiberar(&estruturasGlobais.chamadosAbertosSemPrioridade);
     filaDuplaLiberar(&estruturasGlobais.chamadosAndamento);

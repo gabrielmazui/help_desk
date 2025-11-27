@@ -5,7 +5,6 @@
 
 #include "all.h"
 
-
 static void limparItems(void* a){
     free(a);
 }
@@ -40,13 +39,19 @@ static void menuExtraItemEstoque(void){
             return;
         }
     }
-    Item* item = malloc(sizeof(Item));
-    item->id = itemIdCounter++;
-    item->quantidade = 0;
-    item->requisicoes = 0;
-    strcpy(item->nome, nome);
-    alterarVariavelConfig(3, itemIdCounter);
-    adicionarItemEstoque(item);
+    Item temp = {0};
+    strcpy(temp.nome, nome);
+    Item* temp2 = (Item*)arv_buscar(estruturasGlobais.estoque, &temp);
+    if(temp2 == NULL){
+        // caso nao encontrar o item no estoque, adicionar
+        Item* item = malloc(sizeof(Item));
+        item->id = itemIdCounter++;
+        item->quantidade = 0;
+        item->requisicoes = 0;
+        strcpy(item->nome, nome);
+        alterarVariavelConfig(3, itemIdCounter);
+        adicionarItemEstoque(item);
+    }
 }
 
 
@@ -455,7 +460,7 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
             }else if(selected > 2){
                 char nome[50];
                 int quantidade;
-                if (sscanf(buffer[selected - 3 + (paginaAtual -1)*10], "%50[^<]< %d >", nome, &quantidade) == 2){
+                if (sscanf(buffer[selected - 3 + (paginaAtual -1)*10], "%50[^<] < %d >", nome, &quantidade) == 2){
                     int len = strlen(nome);
                     nome[len-1] = '\0';
                     if(quantidade > 0){
@@ -479,7 +484,7 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
             }else if(selected > 2){
                 char nome[50];
                 int quantidade;
-                if (sscanf(buffer[selected - 3 + (paginaAtual -1)*10], "%50[^<]< %d >", nome, &quantidade) == 2){
+                if (sscanf(buffer[selected - 3 + (paginaAtual -1)*10], "%50[^<] < %d >", nome, &quantidade) == 2){
                     int len = strlen(nome);
                     nome[len-1] = '\0';
                     if(quantidade < 10 && (quantMateriaisSelecionados < 5 || quantidade > 0)){
@@ -525,7 +530,7 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
     strncpy(cham->descricao, descricao, sizeof(cham->descricao)-1);
     cham->descricao[sizeof(cham->descricao)-1] = '\0';
 
-    strncpy(cham->criador, usuario.usuario, sizeof(cham->criador)-1);
+    strncpy(cham->criador, usuario->usuario, sizeof(cham->criador)-1);
     cham->criador[sizeof(cham->criador)-1] = '\0';
     cham->atendente[0] = '\0'; // nenhum atendente ainda
 
@@ -548,14 +553,13 @@ void menuCriarChamadoHandler(int prioridade, int comPreferencia, char titulo[50]
             int quantidade;
             if (sscanf(buffer[j + i*10], "%51[^<]< %d >", nome, &quantidade) == 2){
                 if(quantidade > 0){
-                    Item* itemTemp = calloc(1, sizeof(Item));
+                    Item itemTemp = {0};
                     int len = strlen(nome);
                     while (len > 0 && (nome[len-1] == ' ' || nome[len-1] == '\t'))
                         nome[--len] = '\0';
-                    strcpy(itemTemp->nome, nome);
-                    Item* itemEncontrado = (Item*)arv_buscar(estruturasGlobais.estoque, itemTemp);
+                    strcpy(itemTemp.nome, nome);
+                    Item* itemEncontrado = (Item*)arv_buscar(estruturasGlobais.estoque, &itemTemp);
                     if(itemEncontrado == NULL) printf("vazio\n");
-                    free(itemTemp);
                     filaInserir(cham->materiais, itemEncontrado);
                     if(cham->quantMateriais == 0){
                         cham->quantMateriaisPorItem[0] = quantidade;

@@ -13,17 +13,19 @@ int lastSelected = 1; // opcao escolhida no menu anterior, util para as funcoes 
 int userIdCounter = 0;
 int chamadoIdCounter = 0;
 int itemIdCounter = 0;
+int tipoDeMenuVariavel = 0; // variavel global para indicar o tipo de menu que precisa ser guardado
 char * atendenteAtual = "";
 
-User usuario = {0}; // usuario logado atualmente
+User* usuario = NULL; // usuario logado atualmente
 
+// para procurar usuarios na bst
 static int compararUsuarios(void* a, void* b) {
     User* userA = (User*)a;
     User* userB = (User*)b;
-    int nmrA = userA->Qchamados;
-    int nmrB = userB->Qchamados;
-    if(nmrA < nmrB) return -1;
-    if(nmrA > nmrB) return 1;
+    int qUserA = userA->Qchamados;
+    int qUserB = userB->Qchamados;
+    if(qUserA < qUserB) return -1;
+    if(qUserA > qUserB) return 1;
     return strcmp(userA->usuario, userB->usuario);
 }
 
@@ -41,12 +43,23 @@ static int compararChamados(void* a, void* b) {
 
 static void limparChamados(void* a){
     free(((chamado*)a)->quantMateriaisPorItem);
-    filaLiberar(&((chamado*)a)->materiais);
+    free(((chamado*)a)->materiais);
     free(a);
 }
 
 static void limparUsuarios(void* a){
-    filaLiberar(&((User*)a)->filaChamados);
+    User* u = (User*)a;
+    fila * f = u->filaChamados;
+    noFila * no = f->first;
+    while(no != NULL){
+        noFila * noTemp= no->prox;
+        free(no);
+        no = noTemp;
+    }
+    
+    if(f != NULL){
+        free(f);
+    }
     free(a);
 }
 
@@ -112,13 +125,15 @@ static void encontrarChamadosPorAtendente(arvNo* no){
     if(no == NULL){
         return;
     }
+
     noDuplo *noAtual = estruturasGlobais.chamadosAndamento->inicio;
     while(noAtual != NULL){
         chamado* c = (chamado*)noAtual->dado;
         if(c->atendente != NULL && strcmp(c->atendente, ((User*)no->dado)->usuario) == 0){
             // adicionar chamado na fila do atendente
             filaInserir(((User*)no->dado)->filaChamados, c);
-            ((User*)no->dado)->Qchamados++;
+            (((User*)no->dado)->Qchamados)++;
+            c->QchamadosAtendente = &(((User*)no->dado)->Qchamados); // ponteiro para a quantidade de chamados do atendente
         }
         noAtual = noAtual->prox;
     }
@@ -149,4 +164,5 @@ void initConfigs(void){
     arvNo* no = estruturasGlobais.atendentes->raiz;
     // recursivo coloca ponteiro dos chamados em cada atendente
     encontrarChamadosPorAtendente(no);
+    arv_reconstruir_total(&estruturasGlobais.atendentes);
 }

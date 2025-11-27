@@ -54,40 +54,38 @@ void* filaRetirar(fila * f){
     return v;
 }
 
-/// @brief Remove elemento por índice
-void* filaRetirarIndice(fila * f, int indice){
-    if(f->first == NULL){
-        exit(1);
-    }
+/// @brief Remove elemento por índice da fila e retorna o dado.
+/// @return ponteiro para dado, ou NULL se índice inválido
+void* filaRetirarIndice(fila *f, int indice){
+    if (!f || indice < 0 || f->first == NULL)
+        return NULL;
 
     noFila* atual = f->first;
     noFila* anterior = NULL;
-    int i = 0;
 
-    while(atual != NULL && i < indice){
+    for (int i = 0; i < indice && atual != NULL; i++) {
         anterior = atual;
         atual = atual->prox;
-        i++;
     }
 
-    if(atual == NULL){
-        exit(1);
-    }
+    if (atual == NULL)
+        return NULL;
 
-    if(anterior == NULL){
+    if (anterior == NULL) {
         f->first = atual->prox;
-    }else{
+    } else {
         anterior->prox = atual->prox;
     }
 
-    if(atual == f->last){
+    if (atual == f->last) {
         f->last = anterior;
     }
 
-    void* c = atual->dado;
+    void* dado = atual->dado;
     free(atual);
     f->n--;
-    return c;
+
+    return dado;
 }
 
 /// @brief Libera toda a fila
@@ -106,4 +104,33 @@ void filaLiberar(fila ** f){
 
     free(*f);
     *f = NULL;
+}
+/// @brief Remove elemento por índice
+/// @param f Ponteiro para a fila
+/// @param indice Índice do elemento a ser removido
+void* filaRemoverIndice(fila* f, int indice) {
+    if (!f || f->n == 0 || indice < 0 || indice >= f->n) 
+        return NULL;
+
+    noFila* atual = f->first;
+    noFila* anterior = NULL;
+
+    for (int i = 0; i < indice; i++) {
+        anterior = atual;
+        atual = atual->prox;
+    }
+
+    if (anterior == NULL)
+        f->first = atual->prox;
+    else
+        anterior->prox = atual->prox;
+
+    if (atual == f->last)
+        f->last = anterior;
+
+    void* dado = atual->dado;
+    free(atual);
+    f->n--;
+
+    return dado;
 }

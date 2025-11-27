@@ -116,6 +116,56 @@ filaPrioridade* filaPrioridadeCopiar(filaPrioridade* original) {
     return copia;
 }
 
+void* filaPrioridadeRemoverIndice(filaPrioridade* f, int idx) {
+    if (!f || idx < 0 || idx >= f->n) return NULL;
+
+    void* removido = f->elementos[idx];
+
+    f->n--;
+    f->elementos[idx] = f->elementos[f->n];
+
+    int pai = (idx - 1) / 2;
+
+    if (idx > 0 && f->comparar(f->elementos[idx], f->elementos[pai])) {
+        int j = idx;
+        while (j > 0) {
+            int i = (j - 1) / 2;
+
+            if (!f->comparar(f->elementos[j], f->elementos[i]))
+                break;
+
+            void* tmp = f->elementos[j];
+            f->elementos[j] = f->elementos[i];
+            f->elementos[i] = tmp;
+
+            j = i;
+        }
+    } else {
+        int j = idx;
+        while (1) {
+            int esq = 2 * j + 1;
+            int dir = 2 * j + 2;
+            int maior = j;
+
+            if (esq < f->n && f->comparar(f->elementos[esq], f->elementos[maior]))
+                maior = esq;
+
+            if (dir < f->n && f->comparar(f->elementos[dir], f->elementos[maior]))
+                maior = dir;
+
+            if (maior == j) break;
+
+            void* tmp = f->elementos[j];
+            f->elementos[j] = f->elementos[maior];
+            f->elementos[maior] = tmp;
+
+            j = maior;
+        }
+    }
+
+    return removido;
+}
+
 void filaPrioridadeLiberar(filaPrioridade** f){
     if(f != NULL && *f != NULL){
         for(int i = 0; i < (*f)->n; i++){

@@ -25,6 +25,7 @@ typedef struct chamado{
     Tempo tempoComplexo;
     char criador[50];
     char atendente[50];
+    int * QchamadosAtendente; // ponteiro para a quantidade de chamados do atendente (para facilitar a reorganizacao da arvore)
     fila * materiais;
     int quantMateriais;
     int* quantMateriaisPorItem;
@@ -39,8 +40,14 @@ void concluirChamado(int indice);
 
 void deletarChamado(int indice, int todos);
 
-int verificarEstoqueChamado(chamado* c);
+void cancelarChamado(int indice, int type);
 
 void atenderChamadoSuspenso(int indice);
+
+void verificarSuspensos(void);
+
+void deletarItemChamadoEstoque(int indice);
+
+int existeItemDeletavel(arvoreBinaria *arv);
 
 #endif

@@ -2,7 +2,7 @@
 #define PRIORIDADE_H
 
 typedef enum {
-    nula,
+    minima,
     muito_baixa,
     baixa,
     media,

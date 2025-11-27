@@ -1,6 +1,7 @@
-0;mouse;0;0;
-1;teclado;0;0;
-2;monitor;0;0;
-3;cabo hdmi;0;0;0;garrafa;0;0;
-4;aaa;0;0;
-5;bateria;0;0;6;mouse;0;0;
+0;teclado;0;0;
+1;monitor;0;0;
+2;cabo hdmi;0;0;
+3;bateria;0;0;
+4;notebook;0;0;
+5;carregador;0;0;
+6;microfone;0;0;

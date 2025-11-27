@@ -36,27 +36,74 @@ static void updateChamadoFechado(int paginaAtual, int selected, int ** divisaoLi
     printf("%s+----------------------------------------------------+\n"RESET, color);
     printf("\033[%d;1H\033[K", ++linhaInicio);
 
-    printf("%s| %s%-50s %s|\n"RESET, color, BLUE, (*cham).titulo, color);
+    printf("%s| %s%-50s %s|\n"RESET, color, BLUE, cham->titulo, color);
     printf("\033[%d;1H\033[K", ++linhaInicio);
 
-    printf("%s| %sPrioridade: %s%-38d %s|\n", color, MAGENTA, WHITE, (*cham).prioridade, color);
+    char bufPrioridade[15] = "Maxima";
+    switch(cham->prioridade){
+        case 0:
+            strcpy(bufPrioridade, "Minima");
+            break;
+        case 1:
+            strcpy(bufPrioridade, "Muito Baixa");
+            break;
+        case 2:
+            strcpy(bufPrioridade, "Baixa");
+            break;
+        case 3:
+            strcpy(bufPrioridade, "Media");
+            break;
+        case 4:
+            strcpy(bufPrioridade, "Alta");
+            break;
+        case 5:
+            strcpy(bufPrioridade, "Urgente");
+            break;
+    }
+    printf("%s| %sPrioridade: %s%-38s %s|\n", color, MAGENTA, WHITE, bufPrioridade, color);
     printf("\033[%d;1H\033[K", ++linhaInicio);
 
-    printf("%s| %sCriador: %s%-41s %s|\n"RESET, color, MAGENTA, WHITE, (*cham).criador, color);
+    printf("%s| %sCriador: %s%-41s %s|\n"RESET, color, MAGENTA, WHITE, cham->criador, color);
+    printf("\033[%d;1H\033[K", ++linhaInicio);
+
+    // atendente
+    char * bufAtendente;
+    int len = strlen(cham->atendente);
+    if(len == 0){
+        bufAtendente = "Nao foi atendido";
+    }else{
+        bufAtendente = cham->atendente;
+    }
+    printf("%s| %sAtendente: %s%-39s %s|\n"RESET, color, MAGENTA, WHITE, bufAtendente, color);
     printf("\033[%d;1H\033[K", ++linhaInicio);
 
     printf("%s| %sData e Hora: %s%02d/%02d/%04d %02d:%02d:%02d%-18s %s|\n",
     color, MAGENTA, WHITE,
-    (*cham).tempoComplexo.dia, (*cham).tempoComplexo.mes, (*cham).tempoComplexo.ano,
-    (*cham).tempoComplexo.horas, (*cham).tempoComplexo.minutos, (*cham).tempoComplexo.segundos,
+    cham->tempoComplexo.dia, cham->tempoComplexo.mes, cham->tempoComplexo.ano,
+    cham->tempoComplexo.horas, cham->tempoComplexo.minutos, cham->tempoComplexo.segundos,
     "", color);
     printf("\033[%d;1H\033[K", ++linhaInicio);
 
-    printf("%s| %-50s %s|\n"RESET, color, "", color);
+    fila * fMat = cham->materiais;
+    noFila * noMat = fMat->first;
+    for(int i = 0; i < cham->quantMateriais; i++){
+        char buffer[50];
+        snprintf(buffer, sizeof(buffer), "%s (%d)", ((Item*)noMat->dado)->nome, cham->quantMateriaisPorItem[i]);
+        printf("%s| %s%-50s %s|\n"RESET, color, WHITE, buffer, color);
+        printf("\033[%d;1H\033[K", ++linhaInicio);
+        noMat = noMat->prox;
+    }
+
+    // linha vazia
+    if(cham->cancelado){
+        printf("%s| %sCHAMADO CANCELADO%-33s %s|\n"RESET, color, RED, "", color);
+    }else{
+        printf("%s| %-50s %s|\n"RESET, color, "", color);
+    }
     printf("\033[%d;1H\033[K", ++linhaInicio);
 
     char descricao[7][50] = {0};
-    int linhas = quebrarDescricao((*cham).descricao, descricao);
+    int linhas = quebrarDescricao(cham->descricao, descricao);
     // descricao
     for(int i = 0; i < linhas; i++){
         printf("%s| %s%-50s %s|\n"RESET, color, CYAN, descricao[i], color);
@@ -81,10 +128,10 @@ static void carregarDadosDeletarChamado(int * totalPaginas, int ***divisaoPagina
         // descricao
         char temp[7][50];
         int linhasDesc = quebrarDescricao((*((chamado*)(cham))).descricao, temp);
-        linhasAtual += linhasDesc + 7; // 7 linhas fixas + linhas da desc
+        linhasAtual += linhasDesc + 8 + ((chamado*)(no->dado))->quantMateriais; // 7 linhas fixas + linhas da desc
         if(linhasAtual > 40){
             (*totalPaginas)++;
-            linhasAtual = linhasDesc + 7; // resetar linhasAtual para o novo chamado
+            linhasAtual = linhasDesc + 8 + ((chamado*)(no->dado))->quantMateriais; // resetar linhasAtual para o novo chamado
         }
         count++;
         no = no->prox;
@@ -112,11 +159,11 @@ static void carregarDadosDeletarChamado(int * totalPaginas, int ***divisaoPagina
         // descricao
         char temp[7][50];
         int linhasDesc = quebrarDescricao((*((chamado*)(cham))).descricao, temp);
-        linhasAtual += linhasDesc + 7; // 7 linhas fixas + linhas da desc
+        linhasAtual += linhasDesc + 8 + ((chamado*)(no->dado))->quantMateriais; // 7 linhas fixas + linhas da desc
         if(linhasAtual > 40){
             // nova pagina
             paginaAtual++;
-            linhasAtual = linhasDesc + 7; // resetar linhasAtual para o novo chamado
+            linhasAtual = linhasDesc + 8 + ((chamado*)(no->dado))->quantMateriais; // resetar linhasAtual para o novo chamado
             chamadoAtualNaPagina = 0;
         }
         
@@ -138,12 +185,12 @@ static void printarMenuDeletarChamado(int ** divisaoPaginas, int totalPaginas, i
     noFila* no = fd->first;
     int count = 0;
     if(paginaAtual == 1){
-        char* titulo = "Concluir Chamado em Andamento";
+        char* titulo = "Historico";
         repetirChar(15, '-', BLUE);
         printf(BLUE"%s"RESET, titulo);
         repetirChar(15, '-', BLUE);
         printf("\n");
-        printf(GREEN" %s"RESET, "Selecione um chamado para deletar");
+        printf(GREEN" %s"RESET, "Selecione um registro para deletar");
         printf("\n\n");
 
 
@@ -154,7 +201,7 @@ static void printarMenuDeletarChamado(int ** divisaoPaginas, int totalPaginas, i
 
         // printar opcoes
         char* opcoes[3] = {
-            "Deletar todos os chamados fechados",
+            "Deletar todo o historico",
             "Voltar",
             "Sair"
         };
@@ -192,7 +239,7 @@ static void printarMenuDeletarChamado(int ** divisaoPaginas, int totalPaginas, i
     while(divisaoPaginas[paginaAtual-1][count] > 0){
         chamado* cham = (chamado*)(no->dado);
         char * color = RED;
-        if((selected == count + 3 && paginaAtual == 1) || (selected == count +1 && paginaAtual > 1)){
+        if((selected == count + 4 && paginaAtual == 1) || (selected == count +1 && paginaAtual > 1)){
             // chamado selecionado
             color = BLUE;
         }
@@ -200,11 +247,42 @@ static void printarMenuDeletarChamado(int ** divisaoPaginas, int totalPaginas, i
         printf("%s| %s%-50s %s|\n"RESET, color, BLUE, (*((chamado*)(cham))).titulo, color);
         
         // prioridade
-        printf("%s| %sPrioridade: %s%-38d %s|\n", color, MAGENTA, WHITE, (*((chamado*)(cham))).prioridade, color);
+        char bufPrioridade[15] = "Maxima";
+        switch(cham->prioridade){
+            case minima:
+                strcpy(bufPrioridade, "Minima");
+                break;
+            case muito_baixa:
+                strcpy(bufPrioridade, "Muito Baixa");
+                break;
+            case baixa:
+                strcpy(bufPrioridade, "Baixa");
+                break;
+            case media:
+                strcpy(bufPrioridade, "Media");
+                break;
+            case alta:
+                strcpy(bufPrioridade, "Alta");
+                break;
+            case urgente:
+                strcpy(bufPrioridade, "Urgente");
+                break;
+        }
+        printf("%s| %sPrioridade: %s%-38s %s|\n", color, MAGENTA, WHITE, bufPrioridade, color);
         
         // criador
         printf("%s| %sCriador: %s%-41s %s|\n"RESET, color, MAGENTA, WHITE, (*((chamado*)(cham))).criador, color);
 
+        // atendente
+        char * bufAtendente;
+        int len = strlen(cham->atendente);
+        if(len == 0){
+            bufAtendente = "Nao foi atendido";
+        }else{
+            bufAtendente = cham->atendente;
+        }
+        printf("%s| %sAtendente: %s%-39s %s|\n"RESET, color, MAGENTA, WHITE, bufAtendente, color);
+        
         // data e hora
         printf("%s| %sData e Hora: %s%02d/%02d/%04d %02d:%02d:%02d%-18s %s|\n",
         color, MAGENTA, WHITE,
@@ -212,8 +290,23 @@ static void printarMenuDeletarChamado(int ** divisaoPaginas, int totalPaginas, i
         (*((chamado*)(cham))).tempoComplexo.horas, (*((chamado*)(cham))).tempoComplexo.minutos, (*((chamado*)(cham))).tempoComplexo.segundos,
         "", color);
         
+        // materiais
+        fila * fMat = cham->materiais;
+        noFila * noMat = fMat->first;
+        for(int i = 0; i < cham->quantMateriais; i++){
+            char buffer[50];
+            snprintf(buffer, sizeof(buffer), "%s (%d)", ((Item*)noMat->dado)->nome, cham->quantMateriaisPorItem[i]);
+            printf("%s| %s%-50s %s|\n"RESET, color, WHITE, buffer, color);
+            noMat = noMat->prox;
+        }
+
         // linha vazia
-        printf("%s| %-50s %s|\n"RESET, color, "", color);
+        if(cham->cancelado){
+            printf("%s| %sCHAMADO CANCELADO%-33s %s|\n"RESET, color, RED, "", color);
+        }else{
+            printf("%s| %-50s %s|\n"RESET, color, "", color);
+        }
+        
         // descricao
         char descricao[7][50] = {0};
         int linhas = quebrarDescricao((*((chamado*)(cham))).descricao, descricao);
@@ -250,7 +343,7 @@ void chamadosFechados(void){
         int ultimaOpcao = 0;
         if(paginaAtual == 1){
             // primeira pagina tem 2 opcoes extras (voltar e sair)
-            ultimaOpcao +=2;
+            ultimaOpcao += 3;
         }
         for(int i = 0; divisaoPaginas[paginaAtual-1][i] > 0; i++){
             ultimaOpcao++;
@@ -269,7 +362,7 @@ void chamadosFechados(void){
             break;
         }else if(k == KC_UP){
             if(selected == 2 && paginaAtual == 1){
-                updateOption(4, "Deletar todos os chamados fechados", BG_BLUE, "");
+                updateOption(4, "Deletar todo o historico", BG_BLUE, "");
                 updateOption(5, "Voltar", "", BLUE);
                 selected--;
             }else if(selected == 3 && paginaAtual == 1 && ultimaOpcao > 3){
@@ -311,7 +404,7 @@ void chamadosFechados(void){
         }else if(k == KC_DOWN){
             if(selected == 1 && paginaAtual == 1){
                 // desmarcar voltar
-                updateOption(4, "Deletar todos os chamados fechados", "", BLUE);
+                updateOption(4, "Deletar todo o historico", "", BLUE);
                 // marcar sair
                 updateOption(5, "Voltar", BG_BLUE, "");
                 selected++;

@@ -119,6 +119,9 @@ void carregarChamados(int type){
     fclose(fp);
 }
 
+/// @brief adiciona um chamado ao arquivo de chamados
+/// @param c chamado a ser adicionado
+/// @param type 1-aberto com prioridade, 2-aberto sem prioridade, 3-andamento, 4-concluido, 5-suspenso
 void adicionarChamadoTXT(const chamado *c, int type) {
     char file_name[50];
     switch(type){
@@ -164,6 +167,9 @@ void adicionarChamadoTXT(const chamado *c, int type) {
     fclose(fp);
 }
 
+/// @brief Deleta um chamado do arquivo de chamados
+/// @param id ID do chamado a ser deletado
+/// @param type Tipo do chamado (1-aberto com prioridade, 2-aberto sem prioridade, 3-andamento, 4-concluido, 5-suspenso)
 void deletarChamadoTXT(int id, int type) {
     char file_name[50];
     switch(type){
@@ -182,26 +188,47 @@ void deletarChamadoTXT(int id, int type) {
 
     char linha[400];
     int lendoChamado = 0;
-    int idLido = -1;
     int ignorar = 0;
+    int idLido = -1;
 
     while (fgets(linha, sizeof(linha), fp)) {
-
+        // Está no início de um bloco
         if (!lendoChamado) {
-            idLido = atoi(linha);
+
+            // pular whitespace à esquerda
+            char *p = linha;
+            while (*p == ' ' || *p == '\t' || *p == '\r') p++;
+
+           
+            if (*p < '0' || *p > '9') {
+                fprintf(temp, "%s", linha);
+                continue;
+            }
+
+            // É ID
+            idLido = strtol(p, NULL, 10);
             lendoChamado = 1;
             ignorar = (idLido == id);
-            if (!ignorar) fprintf(temp, "%s", linha);
+
+            if (!ignorar)
+                fprintf(temp, "%s", linha);
+
             continue;
         }
 
-        if (strcmp(linha, "===\n") == 0 || strcmp(linha, "===\r\n") == 0) {
-            if (!ignorar) fprintf(temp, "===\n");
+        // dentro de um bloco até encontrar "==="
+        if (strncmp(linha, "===", 3) == 0) {
+
+            if (!ignorar)
+                fprintf(temp, "%s", linha);
+
             lendoChamado = 0;
             continue;
         }
 
-        if (!ignorar) fprintf(temp, "%s", linha);
+        // linhas internas
+        if (!ignorar)
+            fprintf(temp, "%s", linha);
     }
 
     fclose(fp);
@@ -211,9 +238,10 @@ void deletarChamadoTXT(int id, int type) {
     rename("../db/temp.txt", file_name);
 }
 
+
 void deletarTodosChamadosTXT(void){
     FILE *temp = fopen("../db/temp.txt", "w");
     fclose(temp);
-    remove(CHAMADO1_FILE);
-    rename("../db/temp.txt", CHAMADO1_FILE);
+    remove(CHAMADO4_FILE);
+    rename("../db/temp.txt", CHAMADO4_FILE);
 }
