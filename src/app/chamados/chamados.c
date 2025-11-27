@@ -234,6 +234,7 @@ void cancelarChamado(int indice, int type){
             filaDupla* fAndamento = estruturasGlobais.chamadosAndamento;
             chamado* c = (chamado*)filaDuplaRemover(fAndamento, indice);
             c->cancelado = 1;
+            filaInserir(estruturasGlobais.chamadosConcluidos, c);
             adicionarChamadoTXT(c, 4);
             deletarChamadoTXT(c->id, 3);
             User temp = {0};

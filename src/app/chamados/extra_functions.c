@@ -357,7 +357,7 @@ void criadorMenu(void){
     printf("HelpDesk\n");
     printf("Desenvolvido por:\n");
     printf(BLUE"Gabriel Mazui Azevedo\n");
-    printf("Obrigado por usar meu programa\n");
+    printf("Obrigado por usar meu programa\n\n\n");
     printf(
     BLUE
     "                    *****************\n"
