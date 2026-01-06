@@ -20,10 +20,7 @@ The system emphasizes **terminal aesthetics**, using **ANSI colors**, **keyboard
 | **Technician**      | Handle assigned tickets, conclude tickets, view ticket details                                                      |
 | **Manager**         | View tickets, move tickets to "In Progress" or "Cancelled", manage inventory, restock items, view suspended tickets |
 | **Administrator**   | Same as Manager                                                                                                     |
-| **Mazui (Creator)** | Same as Manager/Admin, plus can edit other admins                                                                   |
-
-> **Note:** Functionally, **Manager, Administrator, and Mazui** have the same permissions for ticket and inventory management. **Mazui** has additional privileges for administrative edits as the system creator.
-
+| **Mazui (Creator)** | Same as Manager/Admin
 ---
 
 ## 🛠️ Main Features
@@ -152,9 +149,3 @@ mazui;mazui123
 ## 🌟 Acknowledgements
 
 Developed for the **Data Structures course at UFSM**, demonstrating cross-platform console UI, dynamic ticket handling, and inventory management in C.
-
----
-
-## 📌 License
-
-MIT License (or your preferred license)
