@@ -3,7 +3,7 @@
 ![C Language](https://img.shields.io/badge/Language-C-blue?style=flat-square)
 ![UFSM](https://img.shields.io/badge/Institution-UFSM-orange?style=flat-square)
 
-## 📖 Overview
+## Overview
 
 This project is a **console-based Help Desk system** written in **C**, developed as a coursework project for the **Data Structures course at UFSM**.
 It allows multiple types of users to interact with a ticketing system, manage inventory, and track ongoing tasks efficiently.
@@ -12,7 +12,7 @@ The system emphasizes **terminal aesthetics**, using **ANSI colors**, **keyboard
 
 ---
 
-## 👥 User Roles & Permissions
+## User Roles & Permissions
 
 | Role                | Capabilities                                                                                                        |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -23,7 +23,7 @@ The system emphasizes **terminal aesthetics**, using **ANSI colors**, **keyboard
 | **Mazui (Creator)** | Same as Manager/Admin
 ---
 
-## 🛠️ Main Features
+## Main Features
 
 ### Ticket Management
 
@@ -79,7 +79,7 @@ The system emphasizes **terminal aesthetics**, using **ANSI colors**, **keyboard
 
 ---
 
-## ⚙️ Compilation
+## Compilation
 
 **Using GCC:**
 
@@ -97,7 +97,7 @@ src/app/users/userDb.c src/app/estoque/estoque.c src/extras/terminal_utils.c src
 
 ---
 
-## ▶️ Usage
+## Usage
 
 ### Login Credentials
 
@@ -135,7 +135,7 @@ mazui;mazui123
 
 ---
 
-## 📝 Notes
+## Notes
 
 * Tickets move to **In Progress** if stock is available; otherwise, they go to **Suspended**.
 * Stock updates check pending tickets and prioritize them using a global priority variable.
@@ -146,6 +146,6 @@ mazui;mazui123
 
 ---
 
-## 🌟 Acknowledgements
+## Acknowledgements
 
 Developed for the **Data Structures course at UFSM**, demonstrating cross-platform console UI, dynamic ticket handling, and inventory management in C.
